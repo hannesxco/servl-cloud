@@ -1,0 +1,124 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, MapPin, Euro, Clock } from 'lucide-react';
+import { getCustomers, saveCustomers } from '@/lib/store';
+import { Customer } from '@/types';
+
+export default function CRM() {
+  const [customers, setCustomers] = useState(getCustomers());
+  const [search, setSearch] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const navigate = useNavigate();
+
+  const filtered = customers.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.company.toLowerCase().includes(search.toLowerCase()) ||
+    c.city.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const partnerMonths = (since: string) => {
+    const d = new Date(since);
+    const now = new Date();
+    return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24 * 30));
+  };
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Kunden</h1>
+          <p className="text-sm text-muted-foreground mt-1">{customers.length} aktive Kunden</p>
+        </div>
+        <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">
+          <Plus size={16} /> Neuer Kunde
+        </button>
+      </div>
+
+      <div className="relative mb-6">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Kunden suchen..."
+          className="w-full bg-secondary border border-border rounded-md pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map(c => (
+          <div
+            key={c.id}
+            onClick={() => navigate(`/crm/${c.id}`)}
+            className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
+                <p className="text-sm text-muted-foreground">{c.company}</p>
+              </div>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.companyType}</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin size={14} /> {c.city}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {showAdd && <AddCustomerModal onClose={() => setShowAdd(false)} onAdd={(c) => {
+        const updated = [...customers, c];
+        setCustomers(updated);
+        saveCustomers(updated);
+        setShowAdd(false);
+      }} />}
+    </div>
+  );
+}
+
+function AddCustomerModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Customer) => void }) {
+  const [form, setForm] = useState({ name: '', company: '', companyType: '', city: '', address: '', phone: '', email: '', notes: '' });
+  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="glass-card p-6 w-full max-w-lg max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-foreground mb-4">Neuer Kunde</h2>
+        <div className="space-y-3">
+          {[
+            { k: 'name', l: 'Name' }, { k: 'company', l: 'Unternehmen' }, { k: 'companyType', l: 'Branche' },
+            { k: 'city', l: 'Stadt' }, { k: 'address', l: 'Adresse' }, { k: 'phone', l: 'Telefon' },
+            { k: 'email', l: 'Email' },
+          ].map(({ k, l }) => (
+            <div key={k}>
+              <label className="text-sm text-muted-foreground block mb-1">{l}</label>
+              <input
+                value={(form as any)[k]}
+                onChange={e => set(k, e.target.value)}
+                className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          ))}
+          <div>
+            <label className="text-sm text-muted-foreground block mb-1">Notizen</label>
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 py-2 rounded-md text-sm border border-border text-foreground hover:bg-accent transition-colors">Abbrechen</button>
+          <button onClick={() => onAdd({
+            ...form, id: crypto.randomUUID(), partnerSince: new Date().toISOString().split('T')[0],
+            totalRevenue: 0, monthlyRevenue: {}, invoices: [], voiceAgents: [],
+          })} className="flex-1 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Erstellen</button>
+        </div>
+      </div>
+    </div>
+  );
+}
