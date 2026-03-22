@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, MapPin, Euro, Clock } from 'lucide-react';
+import { Search, Plus, MapPin, Euro, Clock, Pencil, Trash2 } from 'lucide-react';
 import { getCustomers, saveCustomers } from '@/lib/store';
 import { Customer } from '@/types';
 
@@ -8,6 +8,7 @@ export default function CRM() {
   const [customers, setCustomers] = useState(getCustomers());
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const navigate = useNavigate();
 
   const filtered = customers.filter(c =>
@@ -20,6 +21,18 @@ export default function CRM() {
     const d = new Date(since);
     const now = new Date();
     return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24 * 30));
+  };
+
+  const updateCustomers = (updated: Customer[]) => {
+    setCustomers(updated);
+    saveCustomers(updated);
+  };
+
+  const deleteCustomer = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Kunde wirklich löschen?')) {
+      updateCustomers(customers.filter(c => c.id !== id));
+    }
   };
 
   return (
@@ -40,7 +53,7 @@ export default function CRM() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Kunden suchen..."
-          className="w-full bg-secondary border border-border rounded-md pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-full bg-card border border-border rounded-md pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
 
@@ -56,8 +69,12 @@ export default function CRM() {
                 <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
                 <p className="text-sm text-muted-foreground">{c.company}</p>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.companyType}</span>
+              <div className="flex items-center gap-1">
+                <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
+                <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
+              </div>
             </div>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
@@ -73,24 +90,43 @@ export default function CRM() {
         ))}
       </div>
 
-      {showAdd && <AddCustomerModal onClose={() => setShowAdd(false)} onAdd={(c) => {
-        const updated = [...customers, c];
-        setCustomers(updated);
-        saveCustomers(updated);
+      {showAdd && <CustomerModal onClose={() => setShowAdd(false)} onSave={(c) => {
+        updateCustomers([...customers, c]);
         setShowAdd(false);
+      }} />}
+
+      {editCustomer && <CustomerModal customer={editCustomer} onClose={() => setEditCustomer(null)} onSave={(c) => {
+        updateCustomers(customers.map(cu => cu.id === c.id ? c : cu));
+        setEditCustomer(null);
       }} />}
     </div>
   );
 }
 
-function AddCustomerModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Customer) => void }) {
-  const [form, setForm] = useState({ name: '', company: '', companyType: '', city: '', address: '', phone: '', email: '', notes: '' });
+function CustomerModal({ customer, onClose, onSave }: { customer?: Customer; onClose: () => void; onSave: (c: Customer) => void }) {
+  const isEdit = !!customer;
+  const [form, setForm] = useState({
+    name: customer?.name || '', company: customer?.company || '', companyType: customer?.companyType || '',
+    city: customer?.city || '', address: customer?.address || '', phone: customer?.phone || '',
+    email: customer?.email || '', notes: customer?.notes || '',
+  });
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSave = () => {
+    if (isEdit) {
+      onSave({ ...customer!, ...form });
+    } else {
+      onSave({
+        ...form, id: crypto.randomUUID(), partnerSince: new Date().toISOString().split('T')[0],
+        totalRevenue: 0, monthlyRevenue: {}, invoices: [], voiceAgents: [],
+      });
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="glass-card p-6 w-full max-w-lg max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-foreground mb-4">Neuer Kunde</h2>
+        <h2 className="text-lg font-bold text-foreground mb-4">{isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2>
         <div className="space-y-3">
           {[
             { k: 'name', l: 'Name' }, { k: 'company', l: 'Unternehmen' }, { k: 'companyType', l: 'Branche' },
@@ -113,10 +149,7 @@ function AddCustomerModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: 
         </div>
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 py-2 rounded-md text-sm border border-border text-foreground hover:bg-accent transition-colors">Abbrechen</button>
-          <button onClick={() => onAdd({
-            ...form, id: crypto.randomUUID(), partnerSince: new Date().toISOString().split('T')[0],
-            totalRevenue: 0, monthlyRevenue: {}, invoices: [], voiceAgents: [],
-          })} className="flex-1 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Erstellen</button>
+          <button onClick={handleSave} className="flex-1 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">{isEdit ? 'Speichern' : 'Erstellen'}</button>
         </div>
       </div>
     </div>
