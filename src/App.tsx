@@ -13,22 +13,24 @@ import Finances from "@/pages/Finances";
 import Pipeline from "@/pages/Pipeline";
 import Tasks from "@/pages/Tasks";
 import CalendarView from "@/pages/CalendarView";
+import Agents from "@/pages/Agents";
+import Invoices from "@/pages/Invoices";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [loggedIn, setLoggedIn] = useState(() => {
-    return sessionStorage.getItem('hs_auth') === 'true';
+    return sessionStorage.getItem('sc_auth') === 'true';
   });
 
   const handleLogin = () => {
-    sessionStorage.setItem('hs_auth', 'true');
+    sessionStorage.setItem('sc_auth', 'true');
     setLoggedIn(true);
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('hs_auth');
+    sessionStorage.removeItem('sc_auth');
     setLoggedIn(false);
   };
 
@@ -59,6 +61,8 @@ const App = () => {
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/aufgaben" element={<Tasks />} />
               <Route path="/kalender" element={<CalendarView />} />
+              <Route path="/agents" element={<Agents />} />
+              <Route path="/rechnungen" element={<Invoices />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

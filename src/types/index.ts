@@ -41,6 +41,7 @@ export interface PipelineContact {
   phone: string;
   email: string;
   city: string;
+  address: string;
   notes: string;
   stage: 'neu' | 'kontaktiert' | 'angebot' | 'verhandlung' | 'gewonnen' | 'verloren';
   value: number;
@@ -58,6 +59,12 @@ export interface Task {
   createdAt: string;
 }
 
+export interface CalendarCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -66,6 +73,7 @@ export interface CalendarEvent {
   endTime: string;
   color: string;
   description: string;
+  calendarId: string;
 }
 
 export interface Expense {
@@ -81,7 +89,34 @@ export interface FinanceData {
   currentBalance: number;
   fixedMonthlyCosts: Expense[];
   variableMonthlyCosts: Expense[];
-  fixedMonthlyIncome: { description: string; amount: number }[];
+  fixedMonthlyIncome: { id: string; description: string; amount: number }[];
   monthlyRevenues: Record<string, number>;
   expenses: Expense[];
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  knowledgebase: string;
+  phone: string;
+  apiKeys: { label: string; value: string }[];
+  status: 'planung' | 'entwicklung' | 'aktiv' | 'pausiert';
+  customerId?: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface UploadedInvoice {
+  id: string;
+  fileName: string;
+  fileData: string; // base64
+  customerId: string;
+  customerName: string;
+  amount: number;
+  purpose: string;
+  date: string;
+  keypoints: string[];
+  uploadedAt: string;
 }

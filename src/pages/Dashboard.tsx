@@ -1,7 +1,31 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight } from 'lucide-react';
+import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Sparkles } from 'lucide-react';
 import { getCustomers, getTasks, getEvents, getFinances } from '@/lib/store';
+
+const QUOTES = [
+  "Der beste Zeitpunkt zu starten war gestern. Der zweitbeste ist jetzt. 🚀",
+  "Erfolg ist kein Zufall – er ist die Summe kleiner, täglicher Entscheidungen. 💡",
+  "Dein einziger Limit bist du selbst. Also hör auf, dir im Weg zu stehen! 🔥",
+  "Kunden kaufen keine Produkte, sie kaufen bessere Versionen von sich selbst. 🎯",
+  "Ein Unternehmer sieht in jedem Problem eine Chance. Los geht's! 💪",
+  "Jeder Experte war mal ein Anfänger. Bleib dran! 🌱",
+  "Revenue is vanity, profit is sanity, cash is king. 👑",
+  "Wenn der Plan nicht funktioniert, ändere den Plan – aber niemals das Ziel. 🎯",
+  "Hustle in silence. Let your success make the noise. 🤫",
+  "Heute ist ein guter Tag, um Geschichte zu schreiben. 📖",
+  "Die beste Investition ist in dich selbst. 📈",
+  "Große Dinge beginnen nie in der Komfortzone. 🏔️",
+  "Mach es mit Leidenschaft oder lass es bleiben. ❤️‍🔥",
+  "Dein Netzwerk ist dein Networth. Pflege deine Kontakte! 🤝",
+  "Fortschritt > Perfektion. Ship it! 🚢",
+];
+
+function getDailyQuote(): string {
+  const now = new Date();
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+  return QUOTES[dayOfYear % QUOTES.length];
+}
 
 export default function Dashboard() {
   const customers = getCustomers();
@@ -18,11 +42,19 @@ export default function Dashboard() {
   const recentExpenses = finances.expenses.slice(0, 3);
   const mrr = finances.fixedMonthlyIncome.reduce((s, i) => s + i.amount, 0);
 
+  const quote = useMemo(() => getDailyQuote(), []);
+
   return (
     <div className="p-8">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Willkommen zurück, Hannes</h1>
         <p className="text-muted-foreground text-sm mt-1">Hier ist deine Übersicht für heute</p>
+      </div>
+
+      {/* Daily Quote */}
+      <div className="glass-card p-4 mb-6 flex items-center gap-3 bg-primary/5 border-primary/10">
+        <Sparkles size={18} className="text-primary shrink-0" />
+        <p className="text-sm text-foreground italic">{quote}</p>
       </div>
 
       {/* Stats */}
@@ -86,17 +118,21 @@ export default function Dashboard() {
             <h2 className="font-semibold text-foreground flex items-center gap-2"><Wallet size={18} className="text-primary" />Letzte Ausgaben</h2>
             <Link to="/finanzen" className="text-xs text-primary hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
           </div>
-          <div className="space-y-3">
-            {recentExpenses.map(e => (
-              <div key={e.id} className="flex items-center justify-between p-3 rounded-md bg-secondary/50">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{e.description}</p>
-                  <p className="text-xs text-muted-foreground">{e.category}</p>
+          {recentExpenses.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine Ausgaben vorhanden</p>
+          ) : (
+            <div className="space-y-3">
+              {recentExpenses.map(e => (
+                <div key={e.id} className="flex items-center justify-between p-3 rounded-md bg-secondary/50">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{e.description}</p>
+                    <p className="text-xs text-muted-foreground">{e.category}</p>
+                  </div>
+                  <span className="text-sm font-medium text-destructive">-€{e.amount}</span>
                 </div>
-                <span className="text-sm font-medium text-destructive">-€{e.amount}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Quick Links */}
