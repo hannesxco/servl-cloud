@@ -13,7 +13,7 @@ export default function Login({ onLogin }: LoginProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'hannes' && password === 'admin') {
+    if (email === 'hannes' && password === 'ceWsa3-synmek-mutboh') {
       onLogin();
     } else {
       setError('Ungültige Anmeldedaten');
@@ -27,7 +27,7 @@ export default function Login({ onLogin }: LoginProps) {
           <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Lock size={24} className="text-primary" />
           </div>
-          <h1 className="text-xl font-bold text-foreground">HS Voice</h1>
+          <h1 className="text-xl font-bold text-foreground">Servl Cloud</h1>
           <p className="text-sm text-muted-foreground mt-1">Business Manager</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, TrendingUp, GitBranch, CheckSquare, Calendar, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, TrendingUp, GitBranch, CheckSquare, Calendar, LogOut, Bot, FileText } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -9,6 +9,8 @@ const navItems = [
   { to: '/pipeline', icon: GitBranch, label: 'Pipeline' },
   { to: '/aufgaben', icon: CheckSquare, label: 'Aufgaben' },
   { to: '/kalender', icon: Calendar, label: 'Kalender' },
+  { to: '/agents', icon: Bot, label: 'Agents' },
+  { to: '/rechnungen', icon: FileText, label: 'Rechnungen' },
 ];
 
 export default function AppLayout({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
@@ -17,7 +19,7 @@ export default function AppLayout({ children, onLogout }: { children: ReactNode;
     <div className="flex h-screen overflow-hidden">
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
         <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-lg font-bold text-foreground tracking-tight">HS Voice</h1>
+          <h1 className="text-lg font-bold text-foreground tracking-tight">Servl Cloud</h1>
           <p className="text-xs text-muted-foreground mt-1">Business Manager</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
