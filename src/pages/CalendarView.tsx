@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil } from 'lucide-react';
 import { getEvents, saveEvents, getCalendars, saveCalendars } from '@/lib/store';
 import { CalendarEvent, CalendarCategory } from '@/types';
@@ -7,36 +7,53 @@ const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const DAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const PRESET_COLORS = [
-  'hsl(217, 91%, 60%)', 'hsl(160, 84%, 39%)', 'hsl(38, 92%, 50%)',
-  'hsl(280, 65%, 60%)', 'hsl(0, 72%, 51%)', 'hsl(340, 75%, 55%)',
-  'hsl(190, 80%, 45%)', 'hsl(100, 60%, 45%)',
+  '#FF6961', '#FFB347', '#77DD77', '#6EB5FF', '#B19CD9', '#FF85A2', '#57C4C4', '#A2D149',
 ];
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 type ViewMode = 'month' | 'week' | 'day' | 'year';
+
+function getWeekStart(d: Date) {
+  const day = d.getDay();
+  const diff = (day + 6) % 7;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
+}
+
+function formatHour(h: number) {
+  return `${String(h).padStart(2, '0')}:00`;
+}
+
+function timeToHour(t: string) {
+  const [h, m] = t.split(':').map(Number);
+  return h + m / 60;
+}
+
+function getDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function CalendarView() {
   const [events, setEvents] = useState(getEvents());
   const [calendars, setCalendars] = useState(getCalendars());
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<ViewMode>('month');
+  const [view, setView] = useState<ViewMode>('week');
   const [showAdd, setShowAdd] = useState(false);
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null);
   const [showCalSettings, setShowCalSettings] = useState(false);
   const [visibleCals, setVisibleCals] = useState<Set<string>>(new Set(calendars.map(c => c.id)));
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getDateStr(new Date());
 
   const updateEvents = (e: CalendarEvent[]) => { setEvents(e); saveEvents(e); };
   const updateCalendars = (c: CalendarCategory[]) => { setCalendars(c); saveCalendars(c); setVisibleCals(new Set(c.map(x => x.id))); };
 
-  const getDateStr = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-
   const filteredEvents = events.filter(e => visibleCals.has(e.calendarId));
-  const getCalColor = (calId: string) => calendars.find(c => c.id === calId)?.color || 'hsl(217, 91%, 60%)';
+  const getCalColor = (calId: string) => calendars.find(c => c.id === calId)?.color || '#6EB5FF';
 
   const prev = () => {
     if (view === 'month') setCurrentDate(new Date(year, month - 1, 1));
@@ -57,16 +74,16 @@ export default function CalendarView() {
     if (view === 'year') return `${year}`;
     if (view === 'month') return `${MONTHS[month]} ${year}`;
     if (view === 'day') return `${DAYS_FULL[(currentDate.getDay() + 6) % 7]}, ${currentDate.getDate()}. ${MONTHS[month]} ${year}`;
-    // week
     const start = getWeekStart(currentDate);
     const end = new Date(start.getTime() + 6 * 86400000);
-    if (start.getMonth() === end.getMonth()) return `${start.getDate()}. – ${end.getDate()}. ${MONTHS[start.getMonth()]} ${year}`;
-    return `${start.getDate()}. ${MONTHS[start.getMonth()]} – ${end.getDate()}. ${MONTHS[end.getMonth()]} ${year}`;
+    if (start.getMonth() === end.getMonth()) return `${MONTHS[start.getMonth()]} ${year}`;
+    return `${MONTHS[start.getMonth()]} – ${MONTHS[end.getMonth()]} ${year}`;
   };
 
-  const openAdd = (date: string, time?: string) => {
+  const openAdd = (date: string, startTime?: string, endTime?: string) => {
     setSelectedDate(date);
-    setSelectedTime(time || null);
+    setSelectedTime(startTime || null);
+    setSelectedEndTime(endTime || null);
     setEditEvent(null);
     setShowAdd(true);
   };
@@ -75,67 +92,71 @@ export default function CalendarView() {
     setEditEvent(ev);
     setSelectedDate(ev.date);
     setSelectedTime(ev.startTime);
+    setSelectedEndTime(ev.endTime);
     setShowAdd(true);
   };
 
-  // Drag-to-create state
-  const dragRef = useRef<{ startDate: string; startTime: string } | null>(null);
+  // Current time indicator
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+    <div className="h-full flex flex-col bg-background">
+      {/* Header - Notion style */}
+      <div className="px-6 pt-4 pb-2 flex items-center justify-between border-b border-border">
+        <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-foreground">{headerLabel()}</h1>
           <div className="flex items-center gap-1">
-            <button onClick={prev} className="p-1.5 rounded hover:bg-accent transition-colors"><ChevronLeft size={16} /></button>
-            <button onClick={next} className="p-1.5 rounded hover:bg-accent transition-colors"><ChevronRight size={16} /></button>
+            <button onClick={prev} className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground"><ChevronLeft size={18} /></button>
+            <button onClick={goToday} className="text-xs px-2.5 py-1 rounded border border-border hover:bg-accent transition-colors text-foreground font-medium">Heute</button>
+            <button onClick={next} className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground"><ChevronRight size={18} /></button>
           </div>
-          <button onClick={goToday} className="text-xs px-3 py-1 rounded border border-border hover:bg-accent transition-colors text-foreground">Heute</button>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-secondary rounded-md p-0.5">
             {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
-              <button key={v} onClick={() => setView(v)} className={`text-xs px-3 py-1.5 rounded transition-colors ${view === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              <button key={v} onClick={() => setView(v)} className={`text-xs px-3 py-1 rounded transition-colors ${view === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                 {v === 'day' ? 'Tag' : v === 'week' ? 'Woche' : v === 'month' ? 'Monat' : 'Jahr'}
               </button>
             ))}
           </div>
-          <button onClick={() => setShowCalSettings(true)} className="p-2 rounded hover:bg-accent transition-colors text-muted-foreground"><Settings size={16} /></button>
-          <button onClick={() => openAdd(today)} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium hover:opacity-90 transition-opacity">
-            <Plus size={14} /> Termin
-          </button>
+          <button onClick={() => setShowCalSettings(true)} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground"><Settings size={16} /></button>
+          <button onClick={() => openAdd(today)} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground"><Plus size={16} /></button>
         </div>
       </div>
 
-      {/* Calendar sidebar + main */}
-      <div className="flex gap-4 flex-1 min-h-0">
-        {/* Sidebar calendars */}
-        <div className="w-48 shrink-0 space-y-1">
-          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Kalender</p>
+      {/* Main */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar */}
+        <div className="w-44 shrink-0 border-r border-border p-3 space-y-1 overflow-auto">
+          <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Kalender</p>
           {calendars.map(cal => (
-            <label key={cal.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm text-foreground">
+            <label key={cal.id} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-accent cursor-pointer text-xs text-foreground">
               <input
                 type="checkbox"
                 checked={visibleCals.has(cal.id)}
                 onChange={() => {
-                  const next = new Set(visibleCals);
-                  next.has(cal.id) ? next.delete(cal.id) : next.add(cal.id);
-                  setVisibleCals(next);
+                  const n = new Set(visibleCals);
+                  n.has(cal.id) ? n.delete(cal.id) : n.add(cal.id);
+                  setVisibleCals(n);
                 }}
                 className="rounded border-border"
+                style={{ accentColor: cal.color }}
               />
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cal.color }} />
+              <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: cal.color }} />
               <span className="truncate">{cal.name}</span>
             </label>
           ))}
         </div>
 
-        {/* Main view */}
+        {/* Calendar content */}
         <div className="flex-1 min-h-0 overflow-auto">
-          {view === 'month' && <MonthView year={year} month={month} today={today} events={filteredEvents} getCalColor={getCalColor} onCellClick={openAdd} onEventClick={openEdit} dragRef={dragRef} />}
-          {view === 'week' && <WeekView currentDate={currentDate} today={today} events={filteredEvents} getCalColor={getCalColor} onCellClick={openAdd} onEventClick={openEdit} />}
-          {view === 'day' && <DayView currentDate={currentDate} today={today} events={filteredEvents} getCalColor={getCalColor} onCellClick={openAdd} onEventClick={openEdit} />}
+          {view === 'week' && <WeekView currentDate={currentDate} today={today} now={now} events={filteredEvents} getCalColor={getCalColor} onCellClick={openAdd} onEventClick={openEdit} />}
+          {view === 'day' && <DayView currentDate={currentDate} today={today} now={now} events={filteredEvents} getCalColor={getCalColor} onCellClick={openAdd} onEventClick={openEdit} />}
+          {view === 'month' && <MonthView year={year} month={month} today={today} events={filteredEvents} getCalColor={getCalColor} onCellClick={openAdd} onEventClick={openEdit} />}
           {view === 'year' && <YearView year={year} today={today} events={filteredEvents} getCalColor={getCalColor} onMonthClick={(m: number) => { setCurrentDate(new Date(year, m, 1)); setView('month'); }} />}
         </div>
       </div>
@@ -145,34 +166,305 @@ export default function CalendarView() {
           event={editEvent}
           date={selectedDate || today}
           time={selectedTime}
+          endTime={selectedEndTime}
           calendars={calendars}
           onClose={() => { setShowAdd(false); setEditEvent(null); }}
           onSave={(ev) => {
-            if (editEvent) {
-              updateEvents(events.map(e => e.id === ev.id ? ev : e));
-            } else {
-              updateEvents([...events, ev]);
-            }
-            setShowAdd(false);
-            setEditEvent(null);
+            if (editEvent) updateEvents(events.map(e => e.id === ev.id ? ev : e));
+            else updateEvents([...events, ev]);
+            setShowAdd(false); setEditEvent(null);
           }}
           onDelete={editEvent ? () => { updateEvents(events.filter(e => e.id !== editEvent.id)); setShowAdd(false); setEditEvent(null); } : undefined}
         />
       )}
 
       {showCalSettings && (
-        <CalendarSettingsModal
-          calendars={calendars}
-          onClose={() => setShowCalSettings(false)}
-          onSave={updateCalendars}
-        />
+        <CalendarSettingsModal calendars={calendars} onClose={() => setShowCalSettings(false)} onSave={updateCalendars} />
       )}
     </div>
   );
 }
 
+/* ========== WEEK VIEW (Notion-style) ========== */
+function WeekView({ currentDate, today, now, events, getCalColor, onCellClick, onEventClick }: any) {
+  const weekStart = getWeekStart(currentDate);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart.getTime() + i * 86400000);
+    return { date: d, str: getDateStr(d), dayNum: d.getDate(), dayName: DAYS[i] };
+  });
+
+  const HOUR_HEIGHT = 48;
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragCol, setDragCol] = useState(-1);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragEndY, setDragEndY] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const yToHour = (y: number) => Math.max(0, Math.min(23.5, Math.floor(y / HOUR_HEIGHT * 2) / 2));
+
+  const handleMouseDown = (e: React.MouseEvent, colIdx: number) => {
+    if ((e.target as HTMLElement).closest('.event-block')) return;
+    const rect = gridRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const y = e.clientY - rect.top + (gridRef.current?.parentElement?.scrollTop || 0);
+    setIsDragging(true);
+    setDragCol(colIdx);
+    setDragStartY(y);
+    setDragEndY(y);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !gridRef.current) return;
+    const rect = gridRef.current.getBoundingClientRect();
+    const y = e.clientY - rect.top + (gridRef.current.parentElement?.scrollTop || 0);
+    setDragEndY(y);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const startHour = yToHour(Math.min(dragStartY, dragEndY));
+    const endHour = yToHour(Math.max(dragStartY, dragEndY)) + 0.5;
+    if (endHour - startHour >= 0.5 && dragCol >= 0 && dragCol < days.length) {
+      const day = days[dragCol];
+      const startH = Math.floor(startHour);
+      const startM = (startHour % 1) * 60;
+      const endH = Math.floor(endHour);
+      const endM = (endHour % 1) * 60;
+      onCellClick(
+        day.str,
+        `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`,
+        `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+      );
+    }
+  };
+
+  // Current time line
+  const nowStr = getDateStr(now);
+  const nowHour = now.getHours() + now.getMinutes() / 60;
+  const nowCol = days.findIndex(d => d.str === nowStr);
+
+  // All-day / multi-day events banner area
+  const allDayEvents = events.filter((e: CalendarEvent) => !e.startTime || e.startTime === e.endTime);
+  const timedEvents = events.filter((e: CalendarEvent) => e.startTime && e.startTime !== e.endTime);
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Day headers */}
+      <div className="grid border-b border-border sticky top-0 z-20 bg-background" style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}>
+        <div className="text-[10px] text-muted-foreground text-right pr-2 py-2">MEZ</div>
+        {days.map((d, i) => (
+          <div key={d.str} className={`text-center py-2 border-l border-border ${d.str === today ? '' : ''}`}>
+            <span className="text-[11px] text-muted-foreground">{d.dayName} </span>
+            <span className={`text-sm font-medium inline-flex items-center justify-center w-6 h-6 rounded-full ${d.str === today ? 'bg-destructive text-white' : 'text-foreground'}`}>
+              {d.dayNum}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Time grid */}
+      <div className="flex-1 overflow-auto relative" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div ref={gridRef} className="relative" style={{ height: HOUR_HEIGHT * 24 }}>
+          {/* Grid */}
+          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}>
+            {/* Time labels */}
+            <div className="relative">
+              {HOURS.map(h => (
+                <div key={h} className="absolute right-2 text-[10px] text-muted-foreground" style={{ top: h * HOUR_HEIGHT - 6 }}>
+                  {h > 0 ? formatHour(h) : ''}
+                </div>
+              ))}
+            </div>
+
+            {/* Day columns */}
+            {days.map((d, colIdx) => (
+              <div
+                key={d.str}
+                className={`relative border-l border-border ${d.str === today ? 'bg-primary/[0.02]' : ''}`}
+                onMouseDown={e => handleMouseDown(e, colIdx)}
+              >
+                {/* Hour lines */}
+                {HOURS.map(h => (
+                  <div key={h} className="absolute w-full border-t border-border/50" style={{ top: h * HOUR_HEIGHT }} />
+                ))}
+
+                {/* Events */}
+                {timedEvents
+                  .filter((e: CalendarEvent) => e.date === d.str)
+                  .map((e: CalendarEvent) => {
+                    const startH = timeToHour(e.startTime);
+                    const endH = timeToHour(e.endTime);
+                    const top = startH * HOUR_HEIGHT;
+                    const height = Math.max((endH - startH) * HOUR_HEIGHT, 20);
+                    const color = getCalColor(e.calendarId);
+                    return (
+                      <div
+                        key={e.id}
+                        className="event-block absolute left-0.5 right-1 rounded-md px-2 py-1 cursor-pointer overflow-hidden z-10 hover:opacity-90 transition-opacity"
+                        style={{
+                          top,
+                          height,
+                          backgroundColor: color + '25',
+                          borderLeft: `3px solid ${color}`,
+                        }}
+                        onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
+                      >
+                        <p className="text-[11px] font-semibold truncate" style={{ color }}>{e.title}</p>
+                        <p className="text-[10px] opacity-70" style={{ color }}>
+                          {e.startTime} – {e.endTime}
+                        </p>
+                      </div>
+                    );
+                  })}
+
+                {/* Drag selection */}
+                {isDragging && dragCol === colIdx && (
+                  <div
+                    className="absolute left-0.5 right-1 rounded-md border-2 border-primary/40 bg-primary/10 z-20 pointer-events-none"
+                    style={{
+                      top: Math.min(dragStartY, dragEndY),
+                      height: Math.abs(dragEndY - dragStartY),
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Current time line */}
+          {nowCol >= 0 && (
+            <div
+              className="absolute z-30 pointer-events-none"
+              style={{
+                top: nowHour * HOUR_HEIGHT,
+                left: `calc(56px + ${nowCol} * ((100% - 56px) / 7))`,
+                width: `calc((100% - 56px) / 7)`,
+              }}
+            >
+              <div className="relative">
+                <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-destructive" />
+                <div className="h-0.5 bg-destructive w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ========== DAY VIEW ========== */
+function DayView({ currentDate, today, now, events, getCalColor, onCellClick, onEventClick }: any) {
+  const dateStr = getDateStr(currentDate);
+  const dayEvents = events.filter((e: CalendarEvent) => e.date === dateStr);
+  const HOUR_HEIGHT = 56;
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragEndY, setDragEndY] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const yToHour = (y: number) => Math.max(0, Math.min(23.5, Math.floor(y / HOUR_HEIGHT * 2) / 2));
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.event-block')) return;
+    const rect = gridRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const y = e.clientY - rect.top + (gridRef.current?.parentElement?.scrollTop || 0);
+    setIsDragging(true);
+    setDragStartY(y);
+    setDragEndY(y);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !gridRef.current) return;
+    const rect = gridRef.current.getBoundingClientRect();
+    const y = e.clientY - rect.top + (gridRef.current.parentElement?.scrollTop || 0);
+    setDragEndY(y);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const startHour = yToHour(Math.min(dragStartY, dragEndY));
+    const endHour = yToHour(Math.max(dragStartY, dragEndY)) + 0.5;
+    if (endHour - startHour >= 0.5) {
+      const startH = Math.floor(startHour);
+      const startM = (startHour % 1) * 60;
+      const endH = Math.floor(endHour);
+      const endM = (endHour % 1) * 60;
+      onCellClick(
+        dateStr,
+        `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`,
+        `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+      );
+    }
+  };
+
+  const nowStr = getDateStr(now);
+  const nowHour = now.getHours() + now.getMinutes() / 60;
+
+  return (
+    <div className="h-full overflow-auto" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+      <div ref={gridRef} className="relative grid" style={{ gridTemplateColumns: '56px 1fr', height: HOUR_HEIGHT * 24 }}>
+        {/* Time labels */}
+        <div className="relative">
+          {HOURS.map(h => (
+            <div key={h} className="absolute right-2 text-[10px] text-muted-foreground" style={{ top: h * HOUR_HEIGHT - 6 }}>
+              {h > 0 ? formatHour(h) : ''}
+            </div>
+          ))}
+        </div>
+
+        {/* Day column */}
+        <div className="relative border-l border-border" onMouseDown={handleMouseDown}>
+          {HOURS.map(h => (
+            <div key={h} className="absolute w-full border-t border-border/50" style={{ top: h * HOUR_HEIGHT }} />
+          ))}
+
+          {dayEvents.filter((e: CalendarEvent) => e.startTime).map((e: CalendarEvent) => {
+            const startH = timeToHour(e.startTime);
+            const endH = timeToHour(e.endTime);
+            const top = startH * HOUR_HEIGHT;
+            const height = Math.max((endH - startH) * HOUR_HEIGHT, 24);
+            const color = getCalColor(e.calendarId);
+            return (
+              <div
+                key={e.id}
+                className="event-block absolute left-1 right-4 rounded-md px-3 py-1.5 cursor-pointer z-10 hover:opacity-90"
+                style={{ top, height, backgroundColor: color + '25', borderLeft: `3px solid ${color}` }}
+                onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
+              >
+                <p className="text-xs font-semibold" style={{ color }}>{e.title}</p>
+                <p className="text-[10px] opacity-70" style={{ color }}>{e.startTime} – {e.endTime}</p>
+              </div>
+            );
+          })}
+
+          {isDragging && (
+            <div
+              className="absolute left-1 right-4 rounded-md border-2 border-primary/40 bg-primary/10 z-20 pointer-events-none"
+              style={{ top: Math.min(dragStartY, dragEndY), height: Math.abs(dragEndY - dragStartY) }}
+            />
+          )}
+
+          {dateStr === nowStr && (
+            <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowHour * HOUR_HEIGHT }}>
+              <div className="relative">
+                <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-destructive" />
+                <div className="h-0.5 bg-destructive w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ========== MONTH VIEW ========== */
-function MonthView({ year, month, today, events, getCalColor, onCellClick, onEventClick, dragRef }: any) {
+function MonthView({ year, month, today, events, getCalColor, onCellClick, onEventClick }: any) {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const startDay = (firstDay.getDay() + 6) % 7;
@@ -183,141 +475,46 @@ function MonthView({ year, month, today, events, getCalColor, onCellClick, onEve
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const getDateStr = (day: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const makeDateStr = (day: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
   return (
     <div className="h-full flex flex-col">
       <div className="grid grid-cols-7 border-b border-border">
         {DAYS.map(d => (
-          <div key={d} className="py-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
+          <div key={d} className="py-2 text-center text-[11px] font-medium text-muted-foreground">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 flex-1" style={{ gridAutoRows: '1fr' }}>
         {cells.map((day, i) => {
-          if (!day) return <div key={`e${i}`} className="border-b border-r border-border bg-secondary/30 p-1" />;
-          const dateStr = getDateStr(day);
+          if (!day) return <div key={`e${i}`} className="border-b border-r border-border bg-secondary/20 p-1" />;
+          const dateStr = makeDateStr(day);
           const dayEvents = events.filter((e: CalendarEvent) => e.date === dateStr);
           const isToday = dateStr === today;
           return (
             <div
               key={i}
               onClick={() => onCellClick(dateStr)}
-              className={`border-b border-r border-border p-1 cursor-pointer hover:bg-accent/30 transition-colors min-h-[80px] ${isToday ? 'bg-primary/5' : ''}`}
+              className="border-b border-r border-border p-1 cursor-pointer hover:bg-accent/20 transition-colors min-h-[80px]"
             >
               <div className="flex justify-end">
-                <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-primary text-primary-foreground font-semibold' : 'text-foreground'}`}>{day}</span>
+                <span className={`text-[11px] w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-destructive text-white font-semibold' : 'text-foreground'}`}>{day}</span>
               </div>
               <div className="mt-0.5 space-y-0.5">
-                {dayEvents.slice(0, 3).map((e: CalendarEvent) => (
-                  <div
-                    key={e.id}
-                    onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                    className="text-[10px] leading-tight px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
-                    style={{ backgroundColor: getCalColor(e.calendarId) + '22', color: getCalColor(e.calendarId), borderLeft: `2px solid ${getCalColor(e.calendarId)}` }}
-                  >
-                    {e.startTime} {e.title}
-                  </div>
-                ))}
-                {dayEvents.length > 3 && <p className="text-[10px] text-muted-foreground pl-1">+{dayEvents.length - 3} mehr</p>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ========== WEEK VIEW ========== */
-function getWeekStart(d: Date) {
-  const day = d.getDay();
-  const diff = (day + 6) % 7;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
-}
-
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
-function WeekView({ currentDate, today, events, getCalColor, onCellClick, onEventClick }: any) {
-  const weekStart = getWeekStart(currentDate);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart.getTime() + i * 86400000);
-    return { date: d, str: d.toISOString().split('T')[0], label: `${DAYS[i]} ${d.getDate()}` };
-  });
-
-  return (
-    <div className="h-full overflow-auto">
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] sticky top-0 z-10 bg-background border-b border-border">
-        <div />
-        {days.map(d => (
-          <div key={d.str} className={`py-2 text-center text-xs font-medium border-l border-border ${d.str === today ? 'text-primary' : 'text-muted-foreground'}`}>
-            {d.label}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-[60px_repeat(7,1fr)]">
-        {HOURS.map(h => (
-          <div key={h} className="contents">
-            <div className="h-12 text-[10px] text-muted-foreground pr-2 text-right pt-0 border-r border-border">
-              {String(h).padStart(2, '0')}:00
-            </div>
-            {days.map(d => {
-              const hourEvents = events.filter((e: CalendarEvent) => e.date === d.str && parseInt(e.startTime) === h);
-              return (
-                <div
-                  key={d.str + h}
-                  className={`h-12 border-b border-l border-border hover:bg-accent/20 cursor-pointer relative ${d.str === today ? 'bg-primary/3' : ''}`}
-                  onClick={() => onCellClick(d.str, `${String(h).padStart(2, '0')}:00`)}
-                >
-                  {hourEvents.map((e: CalendarEvent) => (
+                {dayEvents.slice(0, 3).map((e: CalendarEvent) => {
+                  const color = getCalColor(e.calendarId);
+                  return (
                     <div
                       key={e.id}
                       onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                      className="absolute inset-x-0.5 top-0 text-[10px] px-1 py-0.5 rounded truncate cursor-pointer z-10"
-                      style={{ backgroundColor: getCalColor(e.calendarId) + '33', color: getCalColor(e.calendarId), borderLeft: `2px solid ${getCalColor(e.calendarId)}` }}
+                      className="text-[10px] leading-tight px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                      style={{ backgroundColor: color + '20', color, borderLeft: `2px solid ${color}` }}
                     >
+                      {e.startTime && <span className="opacity-60 mr-0.5">{e.startTime}</span>}
                       {e.title}
                     </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ========== DAY VIEW ========== */
-function DayView({ currentDate, today, events, getCalColor, onCellClick, onEventClick }: any) {
-  const dateStr = currentDate.toISOString().split('T')[0];
-  const dayEvents = events.filter((e: CalendarEvent) => e.date === dateStr);
-
-  return (
-    <div className="h-full overflow-auto">
-      <div className="grid grid-cols-[60px_1fr]">
-        {HOURS.map(h => {
-          const hourEvents = dayEvents.filter((e: CalendarEvent) => parseInt(e.startTime) === h);
-          return (
-            <div key={h} className="contents">
-              <div className="h-14 text-[10px] text-muted-foreground pr-2 text-right pt-0 border-r border-border">
-                {String(h).padStart(2, '0')}:00
-              </div>
-              <div
-                className="h-14 border-b border-border hover:bg-accent/20 cursor-pointer relative"
-                onClick={() => onCellClick(dateStr, `${String(h).padStart(2, '0')}:00`)}
-              >
-                {hourEvents.map((e: CalendarEvent) => (
-                  <div
-                    key={e.id}
-                    onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                    className="absolute inset-x-1 top-0.5 text-xs px-2 py-1 rounded cursor-pointer"
-                    style={{ backgroundColor: getCalColor(e.calendarId) + '33', color: getCalColor(e.calendarId), borderLeft: `3px solid ${getCalColor(e.calendarId)}` }}
-                  >
-                    <span className="font-medium">{e.title}</span>
-                    <span className="ml-2 opacity-70">{e.startTime} - {e.endTime}</span>
-                  </div>
-                ))}
+                  );
+                })}
+                {dayEvents.length > 3 && <p className="text-[10px] text-muted-foreground pl-1">+{dayEvents.length - 3}</p>}
               </div>
             </div>
           );
@@ -330,7 +527,7 @@ function DayView({ currentDate, today, events, getCalColor, onCellClick, onEvent
 /* ========== YEAR VIEW ========== */
 function YearView({ year, today, events, getCalColor, onMonthClick }: any) {
   return (
-    <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-3 lg:grid-cols-4 gap-4 p-4">
       {MONTHS.map((name, m) => {
         const firstDay = new Date(year, m, 1);
         const daysInMonth = new Date(year, m + 1, 0).getDate();
@@ -338,7 +535,6 @@ function YearView({ year, today, events, getCalColor, onMonthClick }: any) {
         const cells: (number | null)[] = [];
         for (let i = 0; i < startDay; i++) cells.push(null);
         for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
         return (
           <div key={m} className="cursor-pointer hover:bg-accent/30 p-3 rounded-lg transition-colors" onClick={() => onMonthClick(m)}>
             <p className="text-xs font-semibold text-foreground mb-2">{name}</p>
@@ -351,7 +547,7 @@ function YearView({ year, today, events, getCalColor, onMonthClick }: any) {
                 const isToday = dateStr === today;
                 return (
                   <div key={i} className="flex items-center justify-center aspect-square">
-                    <span className={`text-[9px] w-4 h-4 flex items-center justify-center rounded-full ${isToday ? 'bg-primary text-primary-foreground' : hasEvent ? 'bg-primary/20 text-primary' : 'text-foreground'}`}>{day}</span>
+                    <span className={`text-[9px] w-4 h-4 flex items-center justify-center rounded-full ${isToday ? 'bg-destructive text-white' : hasEvent ? 'bg-primary/20 text-primary' : 'text-foreground'}`}>{day}</span>
                   </div>
                 );
               })}
@@ -364,20 +560,20 @@ function YearView({ year, today, events, getCalColor, onMonthClick }: any) {
 }
 
 /* ========== EVENT MODAL ========== */
-function EventModal({ event, date, time, calendars, onClose, onSave, onDelete }: {
-  event: CalendarEvent | null; date: string; time: string | null; calendars: CalendarCategory[];
+function EventModal({ event, date, time, endTime, calendars, onClose, onSave, onDelete }: {
+  event: CalendarEvent | null; date: string; time: string | null; endTime: string | null; calendars: CalendarCategory[];
   onClose: () => void; onSave: (e: CalendarEvent) => void; onDelete?: () => void;
 }) {
   const [form, setForm] = useState({
     title: event?.title || '',
     date: event?.date || date,
     startTime: event?.startTime || time || '09:00',
-    endTime: event?.endTime || (time ? `${String(parseInt(time) + 1).padStart(2, '0')}:00` : '10:00'),
+    endTime: event?.endTime || endTime || (time ? `${String(Math.min(23, parseInt(time) + 1)).padStart(2, '0')}:00` : '10:00'),
     description: event?.description || '',
     calendarId: event?.calendarId || calendars[0]?.id || '',
   });
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
-  const calColor = calendars.find(c => c.id === form.calendarId)?.color || 'hsl(217, 91%, 60%)';
+  const calColor = calendars.find(c => c.id === form.calendarId)?.color || '#6EB5FF';
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -387,7 +583,7 @@ function EventModal({ event, date, time, calendars, onClose, onSave, onDelete }:
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
         </div>
         <div className="space-y-3">
-          <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titel hinzufügen" className="w-full bg-transparent border-b border-border px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary" />
+          <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titel hinzufügen" className="w-full bg-transparent border-b border-border px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary" autoFocus />
           <input type="date" value={form.date} onChange={e => set('date', e.target.value)} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
           <div className="grid grid-cols-2 gap-3">
             <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
@@ -395,17 +591,26 @@ function EventModal({ event, date, time, calendars, onClose, onSave, onDelete }:
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1">Kalender</label>
-            <select value={form.calendarId} onChange={e => set('calendarId', e.target.value)} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
-              {calendars.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {calendars.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => set('calendarId', c.id)}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${form.calendarId === c.id ? 'border-foreground bg-secondary font-medium' : 'border-border hover:bg-accent'}`}
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                  {c.name}
+                </button>
+              ))}
+            </div>
           </div>
-          <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Beschreibung" rows={2} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+          <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Beschreibung (optional)" rows={2} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
         </div>
         <div className="flex gap-3 mt-5">
-          {onDelete && <button onClick={onDelete} className="px-3 py-2 rounded-md text-xs text-destructive hover:bg-destructive/10 transition-colors"><Trash2 size={14} /></button>}
+          {onDelete && <button onClick={onDelete} className="px-3 py-2 rounded-md text-xs text-destructive hover:bg-destructive/10"><Trash2 size={14} /></button>}
           <div className="flex-1" />
-          <button onClick={onClose} className="px-4 py-2 rounded-md text-xs border border-border text-foreground hover:bg-accent transition-colors">Abbrechen</button>
-          <button onClick={() => onSave({ ...form, id: event?.id || crypto.randomUUID(), color: calColor })} className="px-4 py-2 rounded-md text-xs bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
+          <button onClick={onClose} className="px-4 py-2 rounded-md text-xs border border-border text-foreground hover:bg-accent">Abbrechen</button>
+          <button onClick={() => onSave({ ...form, id: event?.id || crypto.randomUUID(), color: calColor })} className="px-4 py-2 rounded-md text-xs bg-primary text-primary-foreground font-medium hover:opacity-90">
             {event ? 'Speichern' : 'Erstellen'}
           </button>
         </div>
@@ -414,7 +619,7 @@ function EventModal({ event, date, time, calendars, onClose, onSave, onDelete }:
   );
 }
 
-/* ========== CALENDAR SETTINGS MODAL ========== */
+/* ========== CALENDAR SETTINGS ========== */
 function CalendarSettingsModal({ calendars, onClose, onSave }: { calendars: CalendarCategory[]; onClose: () => void; onSave: (c: CalendarCategory[]) => void }) {
   const [cals, setCals] = useState([...calendars]);
   const [editId, setEditId] = useState<string | null>(null);
@@ -425,14 +630,8 @@ function CalendarSettingsModal({ calendars, onClose, onSave }: { calendars: Cale
     setEditId(newCal.id);
   };
 
-  const updateCal = (id: string, key: string, value: string) => {
-    setCals(cals.map(c => c.id === id ? { ...c, [key]: value } : c));
-  };
-
-  const deleteCal = (id: string) => {
-    if (cals.length <= 1) return;
-    setCals(cals.filter(c => c.id !== id));
-  };
+  const updateCal = (id: string, key: string, value: string) => setCals(cals.map(c => c.id === id ? { ...c, [key]: value } : c));
+  const deleteCal = (id: string) => { if (cals.length > 1) setCals(cals.filter(c => c.id !== id)); };
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -446,15 +645,10 @@ function CalendarSettingsModal({ calendars, onClose, onSave }: { calendars: Cale
             <div key={cal.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary">
               {editId === cal.id ? (
                 <>
-                  <div className="relative">
-                    <div className="w-5 h-5 rounded-full cursor-pointer" style={{ backgroundColor: cal.color }} />
-                    <select
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      value={cal.color}
-                      onChange={e => updateCal(cal.id, 'color', e.target.value)}
-                    >
-                      {PRESET_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                  <div className="flex gap-1">
+                    {PRESET_COLORS.map(c => (
+                      <button key={c} onClick={() => updateCal(cal.id, 'color', c)} className={`w-5 h-5 rounded-full border-2 ${cal.color === c ? 'border-foreground' : 'border-transparent'}`} style={{ backgroundColor: c }} />
+                    ))}
                   </div>
                   <input
                     value={cal.name}
@@ -467,27 +661,19 @@ function CalendarSettingsModal({ calendars, onClose, onSave }: { calendars: Cale
                 </>
               ) : (
                 <>
-                  <div className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: cal.color }} />
+                  <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: cal.color }} />
                   <span className="flex-1 text-sm text-foreground">{cal.name}</span>
                   <button onClick={() => setEditId(cal.id)} className="text-muted-foreground hover:text-foreground"><Pencil size={12} /></button>
                   {cals.length > 1 && <button onClick={() => deleteCal(cal.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>}
                 </>
-              )}
-              {/* Color picker dots */}
-              {editId === cal.id && (
-                <div className="flex gap-1 ml-1">
-                  {PRESET_COLORS.map(c => (
-                    <button key={c} onClick={() => updateCal(cal.id, 'color', c)} className={`w-4 h-4 rounded-full border ${cal.color === c ? 'border-foreground' : 'border-transparent'}`} style={{ backgroundColor: c }} />
-                  ))}
-                </div>
               )}
             </div>
           ))}
         </div>
         <button onClick={addCal} className="text-xs text-primary hover:underline flex items-center gap-1 mb-4"><Plus size={12} /> Kalender hinzufügen</button>
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2 rounded-md text-xs border border-border text-foreground hover:bg-accent transition-colors">Abbrechen</button>
-          <button onClick={() => { onSave(cals); onClose(); }} className="flex-1 py-2 rounded-md text-xs bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Speichern</button>
+          <button onClick={onClose} className="flex-1 py-2 rounded-md text-xs border border-border text-foreground hover:bg-accent">Abbrechen</button>
+          <button onClick={() => { onSave(cals); onClose(); }} className="flex-1 py-2 rounded-md text-xs bg-primary text-primary-foreground font-medium hover:opacity-90">Speichern</button>
         </div>
       </div>
     </div>
