@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Plus, FileText, Trash2, X, Upload, Eye } from 'lucide-react';
-import { getUploadedInvoices, saveUploadedInvoices, getCustomers } from '@/lib/store';
+import { getUploadedInvoices, saveUploadedInvoices, getCustomers, saveCustomers, getFinances, saveFinances } from '@/lib/store';
 import { UploadedInvoice } from '@/types';
 
 export default function Invoices() {
@@ -9,6 +9,34 @@ export default function Invoices() {
   const [preview, setPreview] = useState<UploadedInvoice | null>(null);
 
   const update = (i: UploadedInvoice[]) => { setInvoices(i); saveUploadedInvoices(i); };
+
+  const syncInvoiceToFinancesAndCustomer = (inv: UploadedInvoice) => {
+    // Sync to finances: add amount to monthly revenues
+    const finances = getFinances();
+    const invoiceMonth = inv.date.slice(0, 7); // YYYY-MM
+    finances.monthlyRevenues[invoiceMonth] = (finances.monthlyRevenues[invoiceMonth] || 0) + inv.amount;
+    saveFinances(finances);
+
+    // Sync to customer: add invoice and update revenue
+    const customers = getCustomers();
+    const customerIdx = customers.findIndex(c => c.id === inv.customerId);
+    if (customerIdx >= 0) {
+      const customer = { ...customers[customerIdx] };
+      customer.invoices = [...customer.invoices, {
+        id: inv.id,
+        date: inv.date,
+        amount: inv.amount,
+        status: 'offen' as const,
+        description: inv.purpose || inv.fileName,
+      }];
+      customer.monthlyRevenue = { ...customer.monthlyRevenue };
+      const month = inv.date.slice(0, 7);
+      customer.monthlyRevenue[month] = (customer.monthlyRevenue[month] || 0) + inv.amount;
+      customer.totalRevenue = Object.values(customer.monthlyRevenue).reduce((s, v) => s + v, 0);
+      customers[customerIdx] = customer;
+      saveCustomers(customers);
+    }
+  };
 
   return (
     <div className="p-8">
@@ -69,7 +97,7 @@ export default function Invoices() {
         </div>
       )}
 
-      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUpload={(inv) => { update([...invoices, inv]); setShowUpload(false); }} />}
+      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUpload={(inv) => { update([...invoices, inv]); syncInvoiceToFinancesAndCustomer(inv); setShowUpload(false); }} />}
       {preview && <PreviewModal invoice={preview} onClose={() => setPreview(null)} />}
     </div>
   );
