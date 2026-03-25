@@ -6,5 +6,5 @@ services:
       - "80:80"
     restart: always
     environment:
-      - VITE_SUPABASE_URL=DEINE_SUPABASE_URL
+      - VITE_SUPABASE_URL=https://juvknvgktihfjthgnxcp.supabase.co
       - VITE_SUPABASE_ANON_KEY=DEIN_SUPABASE_KEY
