@@ -2,27 +2,19 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Wir kopieren alles aus dem ersten servl-cloud Ordner
-# (Dort liegt deine package.json)
-COPY servl-cloud/package*.json ./
-RUN npm install
+# Wir suchen die package.json automatisch, egal wie tief sie vergraben ist
+COPY . .
+RUN find . -name "package.json" -exec dirname {} \; | xargs -I {} sh -c "cd {} && npm install && npm run build"
 
-# Jetzt kopieren wir den restlichen Code
-COPY servl-cloud/ .
-
-# Wir führen den Build aus
-RUN npm run build
-
-# --- CHECK ---
-# Dieser Befehl zeigt uns in den Logs, wo die Dateien wirklich gelandet sind
-RUN ls -la /app/dist
+# Wir finden den 'dist' Ordner, egal wo er erstellt wurde und schieben ihn an einen festen Ort
+RUN mkdir -p /app/final_build && cp -r $(find . -name "dist" -type d | head -n 1)/* /app/final_build/
 
 # Production-Phase
 FROM nginx:stable-alpine
-# Vite legt die Dateien standardmäßig in /app/dist ab
-COPY --from=build /app/dist /usr/share/nginx/html
+# Wir kopieren die Daten aus unserem festen Sammelordner
+COPY --from=build /app/final_build /usr/share/nginx/html
 
-# SPA-Konfiguration für Nginx
+# SPA-Konfiguration für Nginx (wichtig für React-Routing)
 RUN printf 'server {\n  listen 80;\n  location / {\n    root /usr/share/nginx/html;\n    index index.html;\n    try_files $uri $uri/ /index.html;\n  }\n}\n' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
