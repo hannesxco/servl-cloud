@@ -97,7 +97,7 @@ export default function Invoices() {
         </div>
       )}
 
-      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUpload={(inv) => { update([...invoices, inv]); setShowUpload(false); }} />}
+      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUpload={(inv) => { update([...invoices, inv]); syncInvoiceToFinancesAndCustomer(inv); setShowUpload(false); }} />}
       {preview && <PreviewModal invoice={preview} onClose={() => setPreview(null)} />}
     </div>
   );
