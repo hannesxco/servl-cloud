@@ -165,6 +165,21 @@ export default function CalendarView() {
               </button>
             ))}
           </div>
+          {gcConnected ? (
+            <>
+              <button onClick={handleSync} disabled={syncing} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded border border-border hover:bg-accent transition-colors text-foreground font-medium disabled:opacity-50" title="Google Calendar synchronisieren">
+                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+                Sync
+              </button>
+              <button onClick={handleDisconnect} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground" title="Google Calendar trennen">
+                <Unplug size={16} />
+              </button>
+            </>
+          ) : (
+            <button onClick={startGoogleAuth} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded border border-border hover:bg-accent transition-colors text-foreground font-medium">
+              Google verbinden
+            </button>
+          )}
           <button onClick={() => setShowCalSettings(true)} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground"><Settings size={16} /></button>
           <button onClick={() => openAdd(today)} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground"><Plus size={16} /></button>
         </div>
