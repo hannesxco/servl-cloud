@@ -296,24 +296,29 @@ function WeekView({ currentDate, today, now, events, getCalColor, onCellClick, o
                     const startH = timeToHour(e.startTime);
                     const endH = timeToHour(e.endTime);
                     const top = startH * HOUR_HEIGHT;
-                    const height = Math.max((endH - startH) * HOUR_HEIGHT, 20);
+                    const height = Math.max((endH - startH) * HOUR_HEIGHT, 28);
                     const color = getCalColor(e.calendarId);
+                    const isShort = height < 40;
                     return (
                       <div
                         key={e.id}
-                        className="event-block absolute left-0.5 right-1 rounded-md px-2 py-1 cursor-pointer overflow-hidden z-10 hover:opacity-90 transition-opacity"
+                        className="event-block absolute left-0.5 right-1 rounded-md px-2 py-0.5 cursor-pointer z-10 hover:opacity-90 transition-opacity"
                         style={{
                           top,
                           height,
                           backgroundColor: color + '25',
                           borderLeft: `3px solid ${color}`,
+                          overflow: 'visible',
                         }}
                         onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
+                        title={`${e.title} (${e.startTime} – ${e.endTime})`}
                       >
-                        <p className="text-[11px] font-semibold truncate" style={{ color }}>{e.title}</p>
-                        <p className="text-[10px] opacity-70" style={{ color }}>
-                          {e.startTime} – {e.endTime}
-                        </p>
+                        <p className="text-[11px] font-semibold truncate leading-tight" style={{ color }}>{e.title}</p>
+                        {!isShort && (
+                          <p className="text-[10px] opacity-70 leading-tight" style={{ color }}>
+                            {e.startTime} – {e.endTime}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
