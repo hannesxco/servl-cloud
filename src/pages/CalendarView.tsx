@@ -45,6 +45,8 @@ export default function CalendarView() {
   const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null);
   const [showCalSettings, setShowCalSettings] = useState(false);
   const [visibleCals, setVisibleCals] = useState<Set<string>>(new Set(calendars.map(c => c.id)));
+  const [syncing, setSyncing] = useState(false);
+  const [gcConnected, setGcConnected] = useState(isGCConnected());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -52,6 +54,45 @@ export default function CalendarView() {
 
   const updateEvents = (e: CalendarEvent[]) => { setEvents(e); saveEvents(e); };
   const updateCalendars = (c: CalendarCategory[]) => { setCalendars(c); saveCalendars(c); setVisibleCals(new Set(c.map(x => x.id))); };
+
+  // Handle Google OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      window.history.replaceState({}, '', window.location.pathname);
+      handleAuthCallback(code).then(() => {
+        setGcConnected(true);
+        return syncGoogleCalendar();
+      }).then(merged => {
+        setEvents(merged);
+        setCalendars(getCalendars());
+        setVisibleCals(new Set(getCalendars().map(c => c.id)));
+      }).catch(err => console.error('Google auth failed:', err));
+    }
+  }, []);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const merged = await syncGoogleCalendar();
+      setEvents(merged);
+      setCalendars(getCalendars());
+      setVisibleCals(new Set(getCalendars().map(c => c.id)));
+    } catch (err) {
+      console.error('Sync failed:', err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    clearGCTokens();
+    setGcConnected(false);
+    // Remove google events
+    const local = events.filter(e => !e.id.startsWith('gc-'));
+    updateEvents(local);
+  };
 
   const filteredEvents = events.filter(e => visibleCals.has(e.calendarId));
   const getCalColor = (calId: string) => calendars.find(c => c.id === calId)?.color || '#6EB5FF';
