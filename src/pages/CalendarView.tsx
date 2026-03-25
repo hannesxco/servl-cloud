@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil, RefreshCw, Unplug } from 'lucide-react';
 import { getEvents, saveEvents, getCalendars, saveCalendars } from '@/lib/store';
 import { CalendarEvent, CalendarCategory } from '@/types';
+import { isGCConnected, startGoogleAuth, handleAuthCallback, syncGoogleCalendar, clearGCTokens } from '@/lib/googleCalendar';
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const DAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
