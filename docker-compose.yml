@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  web-app:
+    build: .
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      - VITE_SUPABASE_URL=DEINE_SUPABASE_URL
+      - VITE_SUPABASE_ANON_KEY=DEIN_SUPABASE_KEY
