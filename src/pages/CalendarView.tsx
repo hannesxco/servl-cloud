@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil, RefreshCw, Unplug } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil } from 'lucide-react';
 import { getEvents, saveEvents, getCalendars, saveCalendars } from '@/lib/store';
 import { CalendarEvent, CalendarCategory } from '@/types';
-import { isGCConnected, startGoogleAuth, handleAuthCallback, syncGoogleCalendar, clearGCTokens } from '@/lib/googleCalendar';
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const DAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -45,8 +44,6 @@ export default function CalendarView() {
   const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null);
   const [showCalSettings, setShowCalSettings] = useState(false);
   const [visibleCals, setVisibleCals] = useState<Set<string>>(new Set(calendars.map(c => c.id)));
-  const [syncing, setSyncing] = useState(false);
-  const [gcConnected, setGcConnected] = useState(isGCConnected());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -55,60 +52,6 @@ export default function CalendarView() {
   const updateEvents = (e: CalendarEvent[]) => { setEvents(e); saveEvents(e); };
   const updateCalendars = (c: CalendarCategory[]) => { setCalendars(c); saveCalendars(c); setVisibleCals(new Set(c.map(x => x.id))); };
 
-  // Handle Google OAuth callback
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code) {
-      window.history.replaceState({}, '', window.location.pathname);
-      handleAuthCallback(code).then(() => {
-        setGcConnected(true);
-        return syncGoogleCalendar();
-      }).then(merged => {
-        setEvents(merged);
-        setCalendars(getCalendars());
-        setVisibleCals(new Set(getCalendars().map(c => c.id)));
-      }).catch(err => console.error('Google auth failed:', err));
-    }
-  }, []);
-
-  // Auto-sync Google Calendar every 5 minutes
-  useEffect(() => {
-    if (!gcConnected) return;
-    const interval = setInterval(async () => {
-      try {
-        const merged = await syncGoogleCalendar();
-        setEvents(merged);
-        setCalendars(getCalendars());
-        setVisibleCals(new Set(getCalendars().map(c => c.id)));
-      } catch (err) {
-        console.error('Auto-sync failed:', err);
-      }
-    }, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [gcConnected]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const merged = await syncGoogleCalendar();
-      setEvents(merged);
-      setCalendars(getCalendars());
-      setVisibleCals(new Set(getCalendars().map(c => c.id)));
-    } catch (err) {
-      console.error('Sync failed:', err);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleDisconnect = () => {
-    clearGCTokens();
-    setGcConnected(false);
-    // Remove google events
-    const local = events.filter(e => !e.id.startsWith('gc-'));
-    updateEvents(local);
-  };
 
   const filteredEvents = events.filter(e => visibleCals.has(e.calendarId));
   const getCalColor = (calId: string) => calendars.find(c => c.id === calId)?.color || '#6EB5FF';
@@ -379,16 +322,15 @@ function WeekView({ currentDate, today, now, events, getCalColor, onCellClick, o
                         style={{
                           top,
                           height,
-                          backgroundColor: color + '25',
-                          borderLeft: `3px solid ${color}`,
+                          backgroundColor: color,
                           overflow: 'visible',
                         }}
                         onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
                         title={`${e.title} (${e.startTime} – ${e.endTime})`}
                       >
-                        <p className="text-[11px] font-semibold truncate leading-tight" style={{ color }}>{e.title}</p>
+                        <p className="text-[11px] font-semibold truncate leading-tight text-white">{e.title}</p>
                         {!isShort && (
-                          <p className="text-[10px] opacity-70 leading-tight" style={{ color }}>
+                          <p className="text-[10px] opacity-80 leading-tight text-white">
                             {e.startTime} – {e.endTime}
                           </p>
                         )}
@@ -511,11 +453,11 @@ function DayView({ currentDate, today, now, events, getCalColor, onCellClick, on
               <div
                 key={e.id}
                 className="event-block absolute left-1 right-4 rounded-md px-3 py-1.5 cursor-pointer z-10 hover:opacity-90"
-                style={{ top, height, backgroundColor: color + '25', borderLeft: `3px solid ${color}` }}
+                style={{ top, height, backgroundColor: color }}
                 onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
               >
-                <p className="text-xs font-semibold" style={{ color }}>{e.title}</p>
-                <p className="text-[10px] opacity-70" style={{ color }}>{e.startTime} – {e.endTime}</p>
+                <p className="text-xs font-semibold text-white">{e.title}</p>
+                <p className="text-[10px] opacity-80 text-white">{e.startTime} – {e.endTime}</p>
               </div>
             );
           })}
@@ -585,7 +527,7 @@ function MonthView({ year, month, today, events, getCalColor, onCellClick, onEve
                       key={e.id}
                       onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
                       className="text-[10px] leading-tight px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
-                      style={{ backgroundColor: color + '20', color, borderLeft: `2px solid ${color}` }}
+                      style={{ backgroundColor: color, color: 'white' }}
                     >
                       {e.startTime && <span className="opacity-60 mr-0.5">{e.startTime}</span>}
                       {e.title}
