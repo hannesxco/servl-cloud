@@ -72,6 +72,22 @@ export default function CalendarView() {
     }
   }, []);
 
+  // Auto-sync Google Calendar every 5 minutes
+  useEffect(() => {
+    if (!gcConnected) return;
+    const interval = setInterval(async () => {
+      try {
+        const merged = await syncGoogleCalendar();
+        setEvents(merged);
+        setCalendars(getCalendars());
+        setVisibleCals(new Set(getCalendars().map(c => c.id)));
+      } catch (err) {
+        console.error('Auto-sync failed:', err);
+      }
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [gcConnected]);
+
   const handleSync = async () => {
     setSyncing(true);
     try {
