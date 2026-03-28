@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Sparkles } from 'lucide-react';
 import { getCustomers, getTasks, getEvents, getFinances } from '@/lib/store';
+import { CalendarEvent } from '@/types';
 
 const QUOTES = [
   "Dein Kontostand sagt 'nein', aber dein Mindset sagt 'noch nicht'. 🚀",
