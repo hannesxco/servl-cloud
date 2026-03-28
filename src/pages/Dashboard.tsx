@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Sparkles } from 'lucide-react';
 import { getCustomers, getTasks, getEvents, getFinances } from '@/lib/store';
+import { CalendarEvent } from '@/types';
 
 const QUOTES = [
   "Dein Kontostand sagt 'nein', aber dein Mindset sagt 'noch nicht'. 🚀",
@@ -71,27 +72,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Events */}
+        {/* Today's Calendar View */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground flex items-center gap-2"><Calendar size={18} className="text-primary" />Heutige Termine</h2>
-            <Link to="/kalender" className="text-xs text-primary hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
+            <h2 className="font-semibold text-foreground flex items-center gap-2">
+              <Calendar size={18} className="text-primary" />
+              {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h2>
+            <Link to="/kalender" className="text-xs text-primary hover:underline flex items-center gap-1">Kalender <ArrowRight size={12} /></Link>
           </div>
-          {todayEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine Termine heute</p>
-          ) : (
-            <div className="space-y-3">
-              {todayEvents.map(e => (
-                <div key={e.id} className="flex items-center gap-3 p-3 rounded-md bg-secondary/50">
-                  <div className="w-1 h-10 rounded-full" style={{ backgroundColor: e.color }} />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{e.title}</p>
-                    <p className="text-xs text-muted-foreground">{e.startTime} - {e.endTime}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <DayTimeline events={todayEvents} />
         </div>
 
         {/* Today's Tasks */}
@@ -184,4 +174,81 @@ function PriorityBadge({ priority }: { priority: string }) {
     niedrig: 'bg-muted text-muted-foreground',
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full ${colors[priority] || colors.niedrig}`}>{priority}</span>;
+}
+
+function DayTimeline({ events }: { events: CalendarEvent[] }) {
+  const now = new Date();
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+
+  // Show a window of hours: from earliest event (or 7) to latest event end (or 20)
+  const timeToH = (t: string) => { const [h, m] = t.split(':').map(Number); return h + m / 60; };
+  let minH = 7, maxH = 20;
+  events.forEach(e => {
+    const s = timeToH(e.startTime);
+    const end = timeToH(e.endTime);
+    if (s < minH) minH = Math.floor(s);
+    if (end > maxH) maxH = Math.ceil(end);
+  });
+
+  const hours = Array.from({ length: maxH - minH }, (_, i) => minH + i);
+  const HOUR_HEIGHT = 48;
+
+  if (events.length === 0) {
+    return <p className="text-sm text-muted-foreground">Keine Termine heute</p>;
+  }
+
+  return (
+    <div className="relative overflow-y-auto max-h-[320px] pr-1" style={{ scrollbarWidth: 'thin' }}>
+      <div className="relative" style={{ height: hours.length * HOUR_HEIGHT }}>
+        {/* Hour lines */}
+        {hours.map(h => (
+          <div
+            key={h}
+            className="absolute left-0 right-0 flex items-start"
+            style={{ top: (h - minH) * HOUR_HEIGHT }}
+          >
+            <span className="text-[10px] text-muted-foreground w-10 shrink-0 -mt-1.5 text-right pr-2">
+              {String(h).padStart(2, '0')}:00
+            </span>
+            <div className="flex-1 border-t border-border/50" />
+          </div>
+        ))}
+
+        {/* Current time indicator */}
+        {currentHour >= minH && currentHour <= maxH && (
+          <div
+            className="absolute left-10 right-0 flex items-center z-20 pointer-events-none"
+            style={{ top: (currentHour - minH) * HOUR_HEIGHT }}
+          >
+            <div className="w-2 h-2 rounded-full bg-destructive -ml-1" />
+            <div className="flex-1 border-t-2 border-destructive" />
+          </div>
+        )}
+
+        {/* Events */}
+        {events.map(e => {
+          const start = timeToH(e.startTime);
+          const end = timeToH(e.endTime);
+          const top = (start - minH) * HOUR_HEIGHT;
+          const height = Math.max((end - start) * HOUR_HEIGHT, 20);
+          return (
+            <div
+              key={e.id}
+              className="absolute left-11 right-1 rounded-md px-2 py-1 overflow-hidden z-10"
+              style={{
+                top,
+                height,
+                backgroundColor: e.color,
+              }}
+            >
+              <p className="text-xs font-medium text-white truncate">{e.title}</p>
+              {height > 28 && (
+                <p className="text-[10px] text-white/80">{e.startTime} – {e.endTime}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
