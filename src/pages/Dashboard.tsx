@@ -175,3 +175,80 @@ function PriorityBadge({ priority }: { priority: string }) {
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full ${colors[priority] || colors.niedrig}`}>{priority}</span>;
 }
+
+function DayTimeline({ events }: { events: CalendarEvent[] }) {
+  const now = new Date();
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+
+  // Show a window of hours: from earliest event (or 7) to latest event end (or 20)
+  const timeToH = (t: string) => { const [h, m] = t.split(':').map(Number); return h + m / 60; };
+  let minH = 7, maxH = 20;
+  events.forEach(e => {
+    const s = timeToH(e.startTime);
+    const end = timeToH(e.endTime);
+    if (s < minH) minH = Math.floor(s);
+    if (end > maxH) maxH = Math.ceil(end);
+  });
+
+  const hours = Array.from({ length: maxH - minH }, (_, i) => minH + i);
+  const HOUR_HEIGHT = 48;
+
+  if (events.length === 0) {
+    return <p className="text-sm text-muted-foreground">Keine Termine heute</p>;
+  }
+
+  return (
+    <div className="relative overflow-y-auto max-h-[320px] pr-1" style={{ scrollbarWidth: 'thin' }}>
+      <div className="relative" style={{ height: hours.length * HOUR_HEIGHT }}>
+        {/* Hour lines */}
+        {hours.map(h => (
+          <div
+            key={h}
+            className="absolute left-0 right-0 flex items-start"
+            style={{ top: (h - minH) * HOUR_HEIGHT }}
+          >
+            <span className="text-[10px] text-muted-foreground w-10 shrink-0 -mt-1.5 text-right pr-2">
+              {String(h).padStart(2, '0')}:00
+            </span>
+            <div className="flex-1 border-t border-border/50" />
+          </div>
+        ))}
+
+        {/* Current time indicator */}
+        {currentHour >= minH && currentHour <= maxH && (
+          <div
+            className="absolute left-10 right-0 flex items-center z-20 pointer-events-none"
+            style={{ top: (currentHour - minH) * HOUR_HEIGHT }}
+          >
+            <div className="w-2 h-2 rounded-full bg-destructive -ml-1" />
+            <div className="flex-1 border-t-2 border-destructive" />
+          </div>
+        )}
+
+        {/* Events */}
+        {events.map(e => {
+          const start = timeToH(e.startTime);
+          const end = timeToH(e.endTime);
+          const top = (start - minH) * HOUR_HEIGHT;
+          const height = Math.max((end - start) * HOUR_HEIGHT, 20);
+          return (
+            <div
+              key={e.id}
+              className="absolute left-11 right-1 rounded-md px-2 py-1 overflow-hidden z-10"
+              style={{
+                top,
+                height,
+                backgroundColor: e.color,
+              }}
+            >
+              <p className="text-xs font-medium text-white truncate">{e.title}</p>
+              {height > 28 && (
+                <p className="text-[10px] text-white/80">{e.startTime} – {e.endTime}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
