@@ -71,27 +71,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Events */}
+        {/* Today's Calendar View */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground flex items-center gap-2"><Calendar size={18} className="text-primary" />Heutige Termine</h2>
-            <Link to="/kalender" className="text-xs text-primary hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
+            <h2 className="font-semibold text-foreground flex items-center gap-2">
+              <Calendar size={18} className="text-primary" />
+              {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h2>
+            <Link to="/kalender" className="text-xs text-primary hover:underline flex items-center gap-1">Kalender <ArrowRight size={12} /></Link>
           </div>
-          {todayEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine Termine heute</p>
-          ) : (
-            <div className="space-y-3">
-              {todayEvents.map(e => (
-                <div key={e.id} className="flex items-center gap-3 p-3 rounded-md bg-secondary/50">
-                  <div className="w-1 h-10 rounded-full" style={{ backgroundColor: e.color }} />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{e.title}</p>
-                    <p className="text-xs text-muted-foreground">{e.startTime} - {e.endTime}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <DayTimeline events={todayEvents} />
         </div>
 
         {/* Today's Tasks */}
