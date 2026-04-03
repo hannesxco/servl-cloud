@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Sparkles } from 'lucide-react';
-import { getCustomers, getTasks, getEvents, getFinances } from '@/lib/store';
+import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Sparkles, Mail, FolderKanban } from 'lucide-react';
+import { getCustomers, getTasks, getEvents, getFinances, getMails, getProjects } from '@/lib/store';
 import { CalendarEvent } from '@/types';
 
 const QUOTES = [
@@ -38,6 +38,8 @@ export default function Dashboard() {
   const tasks = getTasks();
   const events = getEvents();
   const finances = getFinances();
+  const mails = getMails();
+  const projects = getProjects();
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -45,8 +47,12 @@ export default function Dashboard() {
   const todayTasks = tasks.filter(t => t.date === today && !t.completed);
   const todayEvents = events.filter(e => e.date === today);
   const monthlyRevenue = finances.monthlyRevenues[currentMonth] || 0;
-  const recentExpenses = finances.expenses.slice(0, 3);
   const mrr = finances.fixedMonthlyIncome.reduce((s, i) => s + i.amount, 0);
+  const recentMails = mails.filter(m => m.folder === 'inbox').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
+  const activeProjects = projects.filter(p => {
+    const prog = p.tasks.length === 0 ? 0 : p.tasks.filter(t => t.completed).length / p.tasks.length;
+    return prog < 1;
+  }).slice(0, 3);
 
   const quote = useMemo(() => getDailyQuote(), []);
 
@@ -63,12 +69,12 @@ export default function Dashboard() {
         <p className="text-sm text-foreground italic">{quote}</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats with colored accents */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Euro} label="Monatsumsatz" value={`€${monthlyRevenue.toLocaleString('de-DE')}`} sub={currentMonth} />
-        <StatCard icon={Wallet} label="Kontostand" value={`€${finances.currentBalance.toLocaleString('de-DE')}`} sub="Aktuell" />
-        <StatCard icon={TrendingUp} label="MRR" value={`€${mrr.toLocaleString('de-DE')}`} sub={`${customers.length} Kunden`} />
-        <StatCard icon={Users} label="Kunden" value={customers.length.toString()} sub="Aktive Kunden" />
+        <StatCard icon={Euro} label="Monatsumsatz" value={`€${monthlyRevenue.toLocaleString('de-DE')}`} sub={currentMonth} color="green" />
+        <StatCard icon={Wallet} label="Kontostand" value={`€${finances.currentBalance.toLocaleString('de-DE')}`} sub="Aktuell" color="yellow" />
+        <StatCard icon={TrendingUp} label="MRR" value={`€${mrr.toLocaleString('de-DE')}`} sub={`${customers.length} Kunden`} color="blue" />
+        <StatCard icon={Users} label="Kunden" value={customers.length.toString()} sub="Aktive Kunden" color="purple" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -76,10 +82,10 @@ export default function Dashboard() {
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2">
-              <Calendar size={18} className="text-primary" />
+              <Calendar size={18} className="text-brand-blue" />
               {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h2>
-            <Link to="/kalender" className="text-xs text-primary hover:underline flex items-center gap-1">Kalender <ArrowRight size={12} /></Link>
+            <Link to="/kalender" className="text-xs text-brand-blue hover:underline flex items-center gap-1">Kalender <ArrowRight size={12} /></Link>
           </div>
           <DayTimeline events={todayEvents} />
         </div>
@@ -87,8 +93,8 @@ export default function Dashboard() {
         {/* Today's Tasks */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground flex items-center gap-2"><CheckSquare size={18} className="text-primary" />Heutige Aufgaben</h2>
-            <Link to="/aufgaben" className="text-xs text-primary hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
+            <h2 className="font-semibold text-foreground flex items-center gap-2"><CheckSquare size={18} className="text-brand-green" />Heutige Aufgaben</h2>
+            <Link to="/aufgaben" className="text-xs text-brand-green hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
           </div>
           {todayTasks.length === 0 ? (
             <p className="text-sm text-muted-foreground">Keine offenen Aufgaben heute</p>
@@ -107,58 +113,76 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Recent Expenses */}
+        {/* E-Mail Mini Briefing */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground flex items-center gap-2"><Wallet size={18} className="text-primary" />Letzte Ausgaben</h2>
-            <Link to="/finanzen" className="text-xs text-primary hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
+            <h2 className="font-semibold text-foreground flex items-center gap-2"><Mail size={18} className="text-brand-purple" />E-Mail</h2>
+            <Link to="/mail" className="text-xs text-brand-purple hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
           </div>
-          {recentExpenses.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine Ausgaben vorhanden</p>
+          {recentMails.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine neuen E-Mails</p>
           ) : (
             <div className="space-y-3">
-              {recentExpenses.map(e => (
-                <div key={e.id} className="flex items-center justify-between p-3 rounded-md bg-secondary/50">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{e.description}</p>
-                    <p className="text-xs text-muted-foreground">{e.category}</p>
+              {recentMails.map(m => (
+                <div key={m.id} className={`p-3 rounded-md ${!m.read ? 'bg-brand-purple/5 border border-brand-purple/10' : 'bg-secondary/50'}`}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className={`text-sm ${!m.read ? 'font-semibold text-foreground' : 'text-foreground'}`}>{m.fromName || m.from}</span>
+                    <span className="text-[10px] text-muted-foreground">{new Date(m.date).toLocaleDateString('de-DE')}</span>
                   </div>
-                  <span className="text-sm font-medium text-destructive">-€{e.amount}</span>
+                  <p className="text-xs text-muted-foreground truncate">{m.subject}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Quick Links */}
+        {/* Active Projects */}
         <div className="glass-card p-6">
-          <h2 className="font-semibold text-foreground mb-4">Schnellzugriff</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { to: '/crm', icon: Users, label: 'Kunden', desc: `${customers.length} aktiv` },
-              { to: '/pipeline', icon: TrendingUp, label: 'Pipeline', desc: 'Leads verwalten' },
-              { to: '/aufgaben', icon: CheckSquare, label: 'Aufgaben', desc: `${tasks.filter(t => !t.completed).length} offen` },
-              { to: '/kalender', icon: Calendar, label: 'Kalender', desc: 'Termine' },
-            ].map(({ to, icon: Icon, label, desc }) => (
-              <Link key={to} to={to} className="p-4 rounded-md bg-secondary/50 hover:bg-accent transition-colors group">
-                <Icon size={20} className="text-primary mb-2" />
-                <p className="text-sm font-medium text-foreground">{label}</p>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-              </Link>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-foreground flex items-center gap-2"><FolderKanban size={18} className="text-brand-yellow" />Projekte</h2>
+            <Link to="/projekte" className="text-xs text-brand-yellow hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
           </div>
+          {activeProjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine aktiven Projekte</p>
+          ) : (
+            <div className="space-y-3">
+              {activeProjects.map(p => {
+                const prog = p.tasks.length === 0 ? 0 : Math.round((p.tasks.filter(t => t.completed).length / p.tasks.length) * 100);
+                return (
+                  <div key={p.id} className="p-3 rounded-md bg-secondary/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-foreground">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{prog}%</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-brand-yellow transition-all" style={{ width: `${prog}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub: string }) {
+function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string; sub: string; color: 'green' | 'yellow' | 'blue' | 'purple' }) {
+  const colorMap = {
+    green: { bg: 'bg-brand-green/10', text: 'text-brand-green', border: 'border-brand-green/20' },
+    yellow: { bg: 'bg-brand-yellow/10', text: 'text-brand-yellow', border: 'border-brand-yellow/20' },
+    blue: { bg: 'bg-brand-blue/10', text: 'text-brand-blue', border: 'border-brand-blue/20' },
+    purple: { bg: 'bg-brand-purple/10', text: 'text-brand-purple', border: 'border-brand-purple/20' },
+  };
+  const c = colorMap[color];
   return (
-    <div className="glass-card p-5">
+    <div className={`glass-card p-5 border ${c.border}`}>
       <div className="flex items-center justify-between mb-3">
         <span className="stat-label">{label}</span>
-        <Icon size={18} className="text-primary" />
+        <div className={`p-2 rounded-lg ${c.bg}`}>
+          <Icon size={18} className={c.text} />
+        </div>
       </div>
       <p className="stat-value">{value}</p>
       <p className="text-xs text-muted-foreground mt-1">{sub}</p>
@@ -169,8 +193,8 @@ function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string;
 function PriorityBadge({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
     dringend: 'bg-destructive/20 text-destructive',
-    hoch: 'bg-warning/20 text-warning',
-    mittel: 'bg-info/20 text-info',
+    hoch: 'bg-brand-yellow/20 text-brand-yellow',
+    mittel: 'bg-brand-blue/20 text-brand-blue',
     niedrig: 'bg-muted text-muted-foreground',
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full ${colors[priority] || colors.niedrig}`}>{priority}</span>;
@@ -180,7 +204,6 @@ function DayTimeline({ events }: { events: CalendarEvent[] }) {
   const now = new Date();
   const currentHour = now.getHours() + now.getMinutes() / 60;
 
-  // Show a window of hours: from earliest event (or 7) to latest event end (or 20)
   const timeToH = (t: string) => { const [h, m] = t.split(':').map(Number); return h + m / 60; };
   let minH = 7, maxH = 20;
   events.forEach(e => {
@@ -200,51 +223,27 @@ function DayTimeline({ events }: { events: CalendarEvent[] }) {
   return (
     <div className="relative overflow-y-auto max-h-[320px] pr-1" style={{ scrollbarWidth: 'thin' }}>
       <div className="relative" style={{ height: hours.length * HOUR_HEIGHT }}>
-        {/* Hour lines */}
         {hours.map(h => (
-          <div
-            key={h}
-            className="absolute left-0 right-0 flex items-start"
-            style={{ top: (h - minH) * HOUR_HEIGHT }}
-          >
-            <span className="text-[10px] text-muted-foreground w-10 shrink-0 -mt-1.5 text-right pr-2">
-              {String(h).padStart(2, '0')}:00
-            </span>
+          <div key={h} className="absolute left-0 right-0 flex items-start" style={{ top: (h - minH) * HOUR_HEIGHT }}>
+            <span className="text-[10px] text-muted-foreground w-10 shrink-0 -mt-1.5 text-right pr-2">{String(h).padStart(2, '0')}:00</span>
             <div className="flex-1 border-t border-border/50" />
           </div>
         ))}
-
-        {/* Current time indicator */}
         {currentHour >= minH && currentHour <= maxH && (
-          <div
-            className="absolute left-10 right-0 flex items-center z-20 pointer-events-none"
-            style={{ top: (currentHour - minH) * HOUR_HEIGHT }}
-          >
+          <div className="absolute left-10 right-0 flex items-center z-20 pointer-events-none" style={{ top: (currentHour - minH) * HOUR_HEIGHT }}>
             <div className="w-2 h-2 rounded-full bg-destructive -ml-1" />
             <div className="flex-1 border-t-2 border-destructive" />
           </div>
         )}
-
-        {/* Events */}
         {events.map(e => {
           const start = timeToH(e.startTime);
           const end = timeToH(e.endTime);
           const top = (start - minH) * HOUR_HEIGHT;
           const height = Math.max((end - start) * HOUR_HEIGHT, 20);
           return (
-            <div
-              key={e.id}
-              className="absolute left-11 right-1 rounded-md px-2 py-1 overflow-hidden z-10"
-              style={{
-                top,
-                height,
-                backgroundColor: e.color,
-              }}
-            >
+            <div key={e.id} className="absolute left-11 right-1 rounded-md px-2 py-1 overflow-hidden z-10" style={{ top, height, backgroundColor: e.color }}>
               <p className="text-xs font-medium text-white truncate">{e.title}</p>
-              {height > 28 && (
-                <p className="text-[10px] text-white/80">{e.startTime} – {e.endTime}</p>
-              )}
+              {height > 28 && <p className="text-[10px] text-white/80">{e.startTime} – {e.endTime}</p>}
             </div>
           );
         })}

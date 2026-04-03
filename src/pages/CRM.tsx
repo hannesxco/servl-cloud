@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, MapPin, Euro, Clock, Pencil, Trash2 } from 'lucide-react';
 import { getCustomers, saveCustomers } from '@/lib/store';
 import { Customer } from '@/types';
+import { AVATARS, getAvatarSrc } from '@/lib/avatars';
 
 export default function CRM() {
   const [customers, setCustomers] = useState(getCustomers());
@@ -58,36 +59,48 @@ export default function CRM() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c => (
-          <div
-            key={c.id}
-            onClick={() => navigate(`/crm/${c.id}`)}
-            className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
-                <p className="text-sm text-muted-foreground">{c.company}</p>
+        {filtered.map(c => {
+          const avatarSrc = getAvatarSrc(c.avatar);
+          return (
+            <div
+              key={c.id}
+              onClick={() => navigate(`/crm/${c.id}`)}
+              className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt={c.name} className="w-10 h-10 rounded-full object-cover bg-secondary" loading="lazy" width={40} height={40} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-brand-purple/20 flex items-center justify-center text-brand-purple font-semibold text-sm">
+                      {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
+                    <p className="text-sm text-muted-foreground">{c.company}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
+                  <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
-                <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin size={14} /> {c.city}
+                </div>
               </div>
             </div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin size={14} /> {c.city}
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {showAdd && <CustomerModal onClose={() => setShowAdd(false)} onSave={(c) => {
@@ -110,15 +123,17 @@ function CustomerModal({ customer, onClose, onSave }: { customer?: Customer; onC
     city: customer?.city || '', address: customer?.address || '', phone: customer?.phone || '',
     email: customer?.email || '', notes: customer?.notes || '',
   });
+  const [selectedAvatar, setSelectedAvatar] = useState(customer?.avatar || '');
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   const handleSave = () => {
     if (isEdit) {
-      onSave({ ...customer!, ...form });
+      onSave({ ...customer!, ...form, avatar: selectedAvatar || undefined });
     } else {
       onSave({
         ...form, id: crypto.randomUUID(), partnerSince: new Date().toISOString().split('T')[0],
         totalRevenue: 0, monthlyRevenue: {}, invoices: [], voiceAgents: [],
+        avatar: selectedAvatar || undefined,
       });
     }
   };
@@ -127,6 +142,29 @@ function CustomerModal({ customer, onClose, onSave }: { customer?: Customer; onC
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="glass-card p-6 w-full max-w-lg max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-foreground mb-4">{isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2>
+
+        {/* Avatar Selection */}
+        <div className="mb-4">
+          <label className="text-sm text-muted-foreground block mb-2">Avatar wählen</label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setSelectedAvatar('')}
+              className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs text-muted-foreground transition-all ${!selectedAvatar ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/30'}`}
+            >
+              Ohne
+            </button>
+            {AVATARS.map(av => (
+              <button
+                key={av.id}
+                onClick={() => setSelectedAvatar(av.id)}
+                className={`w-12 h-12 rounded-full border-2 overflow-hidden transition-all ${selectedAvatar === av.id ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/30'}`}
+              >
+                <img src={av.src} alt={av.label} className="w-full h-full object-cover" loading="lazy" width={48} height={48} />
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-3">
           {[
             { k: 'name', l: 'Name' }, { k: 'company', l: 'Unternehmen' }, { k: 'companyType', l: 'Branche' },
