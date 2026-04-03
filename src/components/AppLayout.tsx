@@ -1,10 +1,12 @@
 import { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, TrendingUp, GitBranch, CheckSquare, Calendar, LogOut, Bot, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, TrendingUp, GitBranch, CheckSquare, Calendar, LogOut, Bot, FileText, FolderKanban, Mail } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/crm', icon: Users, label: 'Kunden' },
+  { to: '/projekte', icon: FolderKanban, label: 'Projekte' },
+  { to: '/mail', icon: Mail, label: 'Mail' },
   { to: '/finanzen', icon: TrendingUp, label: 'Finanzen' },
   { to: '/pipeline', icon: GitBranch, label: 'Pipeline' },
   { to: '/aufgaben', icon: CheckSquare, label: 'Aufgaben' },
