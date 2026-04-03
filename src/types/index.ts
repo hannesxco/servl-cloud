@@ -13,6 +13,7 @@ export interface Customer {
   monthlyRevenue: Record<string, number>;
   invoices: Invoice[];
   voiceAgents: VoiceAgent[];
+  avatar?: string;
 }
 
 export interface Invoice {
@@ -111,7 +112,7 @@ export interface Agent {
 export interface UploadedInvoice {
   id: string;
   fileName: string;
-  fileData: string; // base64
+  fileData: string;
   customerId: string;
   customerName: string;
   amount: number;
@@ -119,4 +120,42 @@ export interface UploadedInvoice {
   date: string;
   keypoints: string[];
   uploadedAt: string;
+}
+
+// Projects
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  createdAt: string;
+  tasks: ProjectTask[];
+}
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: string;
+}
+
+export interface ProjectTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+// Mail
+export interface MailMessage {
+  id: string;
+  from: string;
+  fromName: string;
+  to: string;
+  toName: string;
+  subject: string;
+  body: string;
+  date: string;
+  read: boolean;
+  folder: 'inbox' | 'sent' | 'drafts';
+  customerId?: string;
 }

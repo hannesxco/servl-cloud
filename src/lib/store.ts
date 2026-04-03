@@ -1,4 +1,4 @@
-import { Customer, PipelineContact, Task, CalendarEvent, CalendarCategory, FinanceData, Agent, UploadedInvoice } from '@/types';
+import { Customer, PipelineContact, Task, CalendarEvent, CalendarCategory, FinanceData, Agent, UploadedInvoice, Project, ProjectTag, MailMessage } from '@/types';
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -43,3 +43,13 @@ export function getAgents(): Agent[] { return load('sc_agents', []); }
 export function saveAgents(a: Agent[]) { save('sc_agents', a); }
 export function getUploadedInvoices(): UploadedInvoice[] { return load('sc_invoices', []); }
 export function saveUploadedInvoices(i: UploadedInvoice[]) { save('sc_invoices', i); }
+
+// Projects
+export function getProjects(): Project[] { return load('sc_projects', []); }
+export function saveProjects(p: Project[]) { save('sc_projects', p); }
+export function getProjectTags(): ProjectTag[] { return load('sc_project_tags', []); }
+export function saveProjectTags(t: ProjectTag[]) { save('sc_project_tags', t); }
+
+// Mail
+export function getMails(): MailMessage[] { return load('sc_mails', []); }
+export function saveMails(m: MailMessage[]) { save('sc_mails', m); }
