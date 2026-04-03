@@ -24,8 +24,8 @@ export default function Login({ onLogin }: LoginProps) {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="glass-card p-8 w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Lock size={24} className="text-primary" />
+          <div className="w-14 h-14 rounded-2xl bg-foreground flex items-center justify-center mx-auto mb-4">
+            <Lock size={24} className="text-primary-foreground" />
           </div>
           <h1 className="text-xl font-bold text-foreground">Servl Cloud</h1>
           <p className="text-sm text-muted-foreground mt-1">Business Manager</p>
@@ -39,7 +39,7 @@ export default function Login({ onLogin }: LoginProps) {
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-md pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full bg-secondary border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                 placeholder="Benutzername"
               />
             </div>
@@ -52,7 +52,7 @@ export default function Login({ onLogin }: LoginProps) {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-md pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full bg-secondary border border-border rounded-xl pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                 placeholder="Passwort"
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -61,7 +61,7 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <button type="submit" className="w-full bg-primary text-primary-foreground py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">
+          <button type="submit" className="w-full bg-foreground text-primary-foreground py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
             Anmelden
           </button>
         </form>
