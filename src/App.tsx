@@ -15,6 +15,8 @@ import Tasks from "@/pages/Tasks";
 import CalendarView from "@/pages/CalendarView";
 import Agents from "@/pages/Agents";
 import Invoices from "@/pages/Invoices";
+import Projects from "@/pages/Projects";
+import Mail from "@/pages/Mail";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -63,6 +65,8 @@ const App = () => {
               <Route path="/kalender" element={<CalendarView />} />
               <Route path="/agents" element={<Agents />} />
               <Route path="/rechnungen" element={<Invoices />} />
+              <Route path="/projekte" element={<Projects />} />
+              <Route path="/mail" element={<Mail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

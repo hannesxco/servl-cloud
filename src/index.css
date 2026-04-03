@@ -47,10 +47,15 @@
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --success: 152 56% 42%;
+    --success: 145 63% 42%;
     --success-foreground: 0 0% 100%;
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
+
+    --color-green: 145 63% 42%;
+    --color-yellow: 38 92% 50%;
+    --color-blue: 217 91% 60%;
+    --color-purple: 262 83% 58%;
 
     --chart-green: 80 70% 72%;
   }
