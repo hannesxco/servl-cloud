@@ -1,7 +1,13 @@
-import { useState } from 'react';
-import { Plus, Tag, CheckCircle2, Circle, Trash2, ChevronRight, ChevronDown, BarChart3, X } from 'lucide-react';
+import { useState, DragEvent } from 'react';
+import { Plus, Tag, CheckCircle2, Circle, Trash2, ChevronRight, ChevronDown, BarChart3, X, LayoutList, Columns3, GripVertical } from 'lucide-react';
 import { getProjects, saveProjects, getProjectTags, saveProjectTags } from '@/lib/store';
-import { Project, ProjectTask, ProjectTag } from '@/types';
+import { Project, ProjectTask, ProjectTag, TaskStatus } from '@/types';
+
+const KANBAN_COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
+  { status: 'todo', label: 'Zu erledigen', color: 'hsl(var(--color-yellow))' },
+  { status: 'in_progress', label: 'In Arbeit', color: 'hsl(var(--color-blue))' },
+  { status: 'done', label: 'Erledigt', color: 'hsl(var(--color-green))' },
+];
 
 export default function Projects() {
   const [projects, setProjects] = useState(getProjects());
@@ -10,6 +16,7 @@ export default function Projects() {
   const [showAddTag, setShowAddTag] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const update = (p: Project[]) => { setProjects(p); saveProjects(p); };
   const updateTags = (t: ProjectTag[]) => { setTags(t); saveProjectTags(t); };
@@ -23,18 +30,30 @@ export default function Projects() {
   const toggleTask = (projectId: string, taskId: string) => {
     update(projects.map(p =>
       p.id === projectId
-        ? { ...p, tasks: p.tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t) }
+        ? {
+            ...p, tasks: p.tasks.map(t => t.id === taskId
+              ? { ...t, completed: !t.completed, status: (!t.completed ? 'done' : 'todo') as TaskStatus }
+              : t)
+          }
         : p
     ));
   };
 
   const addTask = (projectId: string, title: string) => {
-    const task: ProjectTask = { id: crypto.randomUUID(), title, completed: false, createdAt: new Date().toISOString() };
+    const task: ProjectTask = { id: crypto.randomUUID(), title, completed: false, status: 'todo', createdAt: new Date().toISOString() };
     update(projects.map(p => p.id === projectId ? { ...p, tasks: [...p.tasks, task] } : p));
   };
 
   const deleteTask = (projectId: string, taskId: string) => {
     update(projects.map(p => p.id === projectId ? { ...p, tasks: p.tasks.filter(t => t.id !== taskId) } : p));
+  };
+
+  const moveTask = (projectId: string, taskId: string, newStatus: TaskStatus) => {
+    update(projects.map(p =>
+      p.id === projectId
+        ? { ...p, tasks: p.tasks.map(t => t.id === taskId ? { ...t, status: newStatus, completed: newStatus === 'done' } : t) }
+        : p
+    ));
   };
 
   const deleteProject = (id: string) => {
@@ -111,7 +130,6 @@ export default function Projects() {
                   <button onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }} className="p-1 text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
                 </div>
 
-                {/* Tags */}
                 {p.tags.length > 0 && (
                   <div className="flex gap-1 ml-6 mb-2 flex-wrap">
                     {p.tags.map(tagId => {
@@ -123,7 +141,6 @@ export default function Projects() {
                   </div>
                 )}
 
-                {/* Progress */}
                 <div className="ml-6 flex items-center gap-3">
                   <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                     <div
@@ -143,13 +160,41 @@ export default function Projects() {
         {/* Project Detail */}
         <div className="lg:col-span-2">
           {activeProject ? (
-            <ProjectDetail
-              project={activeProject}
-              tags={tags}
-              onToggleTask={(taskId) => toggleTask(activeProject.id, taskId)}
-              onAddTask={(title) => addTask(activeProject.id, title)}
-              onDeleteTask={(taskId) => deleteTask(activeProject.id, taskId)}
-            />
+            <div>
+              {/* View toggle */}
+              <div className="flex gap-1 mb-4 bg-secondary rounded-lg p-1 w-fit">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <LayoutList size={14} /> Liste
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Columns3 size={14} /> Kanban
+                </button>
+              </div>
+
+              {viewMode === 'list' ? (
+                <ProjectDetail
+                  project={activeProject}
+                  tags={tags}
+                  onToggleTask={(taskId) => toggleTask(activeProject.id, taskId)}
+                  onAddTask={(title) => addTask(activeProject.id, title)}
+                  onDeleteTask={(taskId) => deleteTask(activeProject.id, taskId)}
+                />
+              ) : (
+                <KanbanBoard
+                  project={activeProject}
+                  onAddTask={(title) => addTask(activeProject.id, title)}
+                  onDeleteTask={(taskId) => deleteTask(activeProject.id, taskId)}
+                  onMoveTask={(taskId, status) => moveTask(activeProject.id, taskId, status)}
+                  onToggleTask={(taskId) => toggleTask(activeProject.id, taskId)}
+                />
+              )}
+            </div>
           ) : (
             <div className="glass-card p-12 flex flex-col items-center justify-center text-center">
               <BarChart3 size={48} className="text-muted-foreground/30 mb-4" />
@@ -165,6 +210,152 @@ export default function Projects() {
   );
 }
 
+/* ─── Kanban Board ─── */
+function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTask }: {
+  project: Project;
+  onAddTask: (title: string) => void;
+  onDeleteTask: (id: string) => void;
+  onMoveTask: (taskId: string, status: TaskStatus) => void;
+  onToggleTask: (id: string) => void;
+}) {
+  const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
+  const [newTaskCol, setNewTaskCol] = useState<TaskStatus | null>(null);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+
+  const prog = project.tasks.length === 0 ? 0 : Math.round((project.tasks.filter(t => t.completed).length / project.tasks.length) * 100);
+
+  const handleDragStart = (e: DragEvent, taskId: string) => {
+    e.dataTransfer.setData('taskId', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCol(status);
+  };
+
+  const handleDrop = (e: DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('taskId');
+    if (taskId) onMoveTask(taskId, status);
+    setDragOverCol(null);
+  };
+
+  const handleAddInColumn = (status: TaskStatus) => {
+    if (!newTaskTitle.trim()) return;
+    onAddTask(newTaskTitle.trim());
+    // The task is added as 'todo' by default, so move it if needed
+    // We'll handle this by adding with correct status via a slight delay
+    setNewTaskTitle('');
+    setNewTaskCol(null);
+    // For non-todo columns, we move it after creation
+    if (status !== 'todo') {
+      setTimeout(() => {
+        const projects = getProjects();
+        const p = projects.find(pr => pr.id === project.id);
+        if (p) {
+          const lastTask = p.tasks[p.tasks.length - 1];
+          if (lastTask) onMoveTask(lastTask.id, status);
+        }
+      }, 50);
+    }
+  };
+
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-bold text-foreground">{project.name}</h2>
+        <span className="text-sm font-semibold" style={{ color: prog === 100 ? 'hsl(var(--color-green))' : 'hsl(var(--color-blue))' }}>{prog}%</span>
+      </div>
+      {project.description && <p className="text-sm text-muted-foreground mb-4">{project.description}</p>}
+
+      <div className="h-3 bg-secondary rounded-full overflow-hidden mb-6">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${prog}%`, backgroundColor: prog === 100 ? 'hsl(var(--color-green))' : 'hsl(var(--color-blue))' }}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {KANBAN_COLUMNS.map(col => {
+          const tasks = project.tasks.filter(t => (t.status || (t.completed ? 'done' : 'todo')) === col.status);
+          const isDragOver = dragOverCol === col.status;
+
+          return (
+            <div
+              key={col.status}
+              onDragOver={(e) => handleDragOver(e, col.status)}
+              onDragLeave={() => setDragOverCol(null)}
+              onDrop={(e) => handleDrop(e, col.status)}
+              className={`rounded-xl p-3 min-h-[200px] transition-colors ${isDragOver ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-secondary/50'}`}
+            >
+              {/* Column header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.color }} />
+                  <span className="text-xs font-semibold text-foreground">{col.label}</span>
+                  <span className="text-[10px] text-muted-foreground bg-background rounded-full px-1.5 py-0.5">{tasks.length}</span>
+                </div>
+                <button
+                  onClick={() => setNewTaskCol(newTaskCol === col.status ? null : col.status)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+
+              {/* Add task inline */}
+              {newTaskCol === col.status && (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleAddInColumn(col.status); }}
+                  className="mb-2"
+                >
+                  <input
+                    autoFocus
+                    value={newTaskTitle}
+                    onChange={e => setNewTaskTitle(e.target.value)}
+                    onBlur={() => { if (!newTaskTitle.trim()) setNewTaskCol(null); }}
+                    placeholder="Aufgabe..."
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </form>
+              )}
+
+              {/* Task cards */}
+              <div className="space-y-2">
+                {tasks.map(t => (
+                  <div
+                    key={t.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, t.id)}
+                    className="bg-background rounded-lg p-3 border border-border shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors group"
+                  >
+                    <div className="flex items-start gap-2">
+                      <GripVertical size={12} className="text-muted-foreground/40 mt-0.5 shrink-0" />
+                      <button onClick={() => onToggleTask(t.id)} className="shrink-0 mt-0.5">
+                        {t.completed
+                          ? <CheckCircle2 size={14} className="text-brand-green" />
+                          : <Circle size={14} className="text-muted-foreground" />
+                        }
+                      </button>
+                      <span className={`flex-1 text-xs ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.title}</span>
+                      <button onClick={() => onDeleteTask(t.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity shrink-0">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── List Detail ─── */
 function ProjectDetail({ project, tags, onToggleTask, onAddTask, onDeleteTask }: {
   project: Project; tags: ProjectTag[];
   onToggleTask: (id: string) => void; onAddTask: (title: string) => void; onDeleteTask: (id: string) => void;
@@ -180,7 +371,6 @@ function ProjectDetail({ project, tags, onToggleTask, onAddTask, onDeleteTask }:
       </div>
       {project.description && <p className="text-sm text-muted-foreground mb-4">{project.description}</p>}
 
-      {/* Big progress bar */}
       <div className="h-3 bg-secondary rounded-full overflow-hidden mb-6">
         <div
           className="h-full rounded-full transition-all duration-500"
@@ -188,7 +378,6 @@ function ProjectDetail({ project, tags, onToggleTask, onAddTask, onDeleteTask }:
         />
       </div>
 
-      {/* Add task */}
       <form onSubmit={(e) => { e.preventDefault(); if (newTask.trim()) { onAddTask(newTask.trim()); setNewTask(''); } }} className="flex gap-2 mb-4">
         <input
           value={newTask}
@@ -199,7 +388,6 @@ function ProjectDetail({ project, tags, onToggleTask, onAddTask, onDeleteTask }:
         <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90">Hinzufügen</button>
       </form>
 
-      {/* Tasks */}
       <div className="space-y-2">
         {project.tasks.map(t => (
           <div key={t.id} className="flex items-center gap-3 p-3 rounded-md bg-secondary/50 group">
