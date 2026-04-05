@@ -132,10 +132,13 @@ export interface Project {
   tasks: ProjectTask[];
 }
 
+export type TaskStatus = 'todo' | 'in_progress' | 'done';
+
 export interface ProjectTask {
   id: string;
   title: string;
   completed: boolean;
+  status: TaskStatus;
   createdAt: string;
 }
 
