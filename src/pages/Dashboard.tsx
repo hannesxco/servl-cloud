@@ -24,7 +24,7 @@ export default function Dashboard() {
     return prog < 1;
   }).slice(0, 3);
 
-  const quote = useMemo(() => getDailyQuote(), []);
+  
 
   return (
     <div className="p-8">
