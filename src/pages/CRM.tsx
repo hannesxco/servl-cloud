@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, MapPin, Euro, Clock, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, MapPin, Euro, Clock, Pencil, Trash2, Upload, X } from 'lucide-react';
 import { getCustomers, saveCustomers } from '@/lib/store';
 import { Customer } from '@/types';
-import { AVATARS, getAvatarSrc } from '@/lib/avatars';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function CRM() {
   const [customers, setCustomers] = useState(getCustomers());
@@ -59,48 +59,45 @@ export default function CRM() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c => {
-          const avatarSrc = getAvatarSrc(c.avatar);
-          return (
-            <div
-              key={c.id}
-              onClick={() => navigate(`/crm/${c.id}`)}
-              className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  {avatarSrc ? (
-                    <img src={avatarSrc} alt={c.name} className="w-10 h-10 rounded-full object-cover bg-secondary" loading="lazy" width={40} height={40} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-brand-purple/20 flex items-center justify-center text-brand-purple font-semibold text-sm">
-                      {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
-                    <p className="text-sm text-muted-foreground">{c.company}</p>
+        {filtered.map(c => (
+          <div
+            key={c.id}
+            onClick={() => navigate(`/crm/${c.id}`)}
+            className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                {c.avatar ? (
+                  <img src={c.avatar} alt={c.name} className="w-10 h-10 rounded-full object-cover bg-secondary" loading="lazy" width={40} height={40} />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-brand-purple/20 flex items-center justify-center text-brand-purple font-semibold text-sm">
+                    {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
-                  <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
+                )}
+                <div>
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
+                  <p className="text-sm text-muted-foreground">{c.company}</p>
                 </div>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin size={14} /> {c.city}
-                </div>
+              <div className="flex items-center gap-1">
+                <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
+                <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
               </div>
             </div>
-          );
-        })}
+            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin size={14} /> {c.city}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {showAdd && <CustomerModal onClose={() => setShowAdd(false)} onSave={(c) => {
@@ -123,17 +120,37 @@ function CustomerModal({ customer, onClose, onSave }: { customer?: Customer; onC
     city: customer?.city || '', address: customer?.address || '', phone: customer?.phone || '',
     email: customer?.email || '', notes: customer?.notes || '',
   });
-  const [selectedAvatar, setSelectedAvatar] = useState(customer?.avatar || '');
+  const [avatarUrl, setAvatarUrl] = useState(customer?.avatar || '');
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('customer-avatars').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('customer-avatars').getPublicUrl(path);
+      setAvatarUrl(publicUrl);
+    } catch (err) {
+      console.error('Upload failed:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = () => {
     if (isEdit) {
-      onSave({ ...customer!, ...form, avatar: selectedAvatar || undefined });
+      onSave({ ...customer!, ...form, avatar: avatarUrl || undefined });
     } else {
       onSave({
         ...form, id: crypto.randomUUID(), partnerSince: new Date().toISOString().split('T')[0],
         totalRevenue: 0, monthlyRevenue: {}, invoices: [], voiceAgents: [],
-        avatar: selectedAvatar || undefined,
+        avatar: avatarUrl || undefined,
       });
     }
   };
@@ -143,25 +160,42 @@ function CustomerModal({ customer, onClose, onSave }: { customer?: Customer; onC
       <div className="glass-card p-6 w-full max-w-lg max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-foreground mb-4">{isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2>
 
-        {/* Avatar Selection */}
+        {/* Profile Picture Upload */}
         <div className="mb-4">
-          <label className="text-sm text-muted-foreground block mb-2">Avatar wählen</label>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setSelectedAvatar('')}
-              className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs text-muted-foreground transition-all ${!selectedAvatar ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/30'}`}
-            >
-              Ohne
-            </button>
-            {AVATARS.map(av => (
+          <label className="text-sm text-muted-foreground block mb-2">Profilbild</label>
+          <div className="flex items-center gap-4">
+            {avatarUrl ? (
+              <div className="relative">
+                <img src={avatarUrl} alt="Profilbild" className="w-16 h-16 rounded-full object-cover bg-secondary" />
+                <button
+                  onClick={() => setAvatarUrl('')}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
+                <Upload size={20} />
+              </div>
+            )}
+            <div>
               <button
-                key={av.id}
-                onClick={() => setSelectedAvatar(av.id)}
-                className={`w-12 h-12 rounded-full border-2 overflow-hidden transition-all ${selectedAvatar === av.id ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/30'}`}
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="text-sm px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-accent transition-colors disabled:opacity-50"
               >
-                <img src={av.src} alt={av.label} className="w-full h-full object-cover" loading="lazy" width={48} height={48} />
+                {uploading ? 'Wird hochgeladen...' : 'Bild hochladen'}
               </button>
-            ))}
+              <p className="text-xs text-muted-foreground mt-1">JPG, PNG oder WebP</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
           </div>
         </div>
 
