@@ -33,11 +33,6 @@ export default function Dashboard() {
         <p className="text-muted-foreground text-sm mt-1">Hier ist deine Übersicht für heute</p>
       </div>
 
-      {/* Daily Quote */}
-      <div className="glass-card p-4 mb-6 flex items-center gap-3 bg-primary/5 border-primary/10">
-        <Sparkles size={18} className="text-primary shrink-0" />
-        <p className="text-sm text-foreground italic">{quote}</p>
-      </div>
 
       {/* Stats with colored accents */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
