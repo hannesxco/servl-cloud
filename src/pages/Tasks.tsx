@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Plus, Check, Trash2 } from 'lucide-react';
+import { Plus, Check, Trash2, Pencil, AlertTriangle } from 'lucide-react';
 import { getTasks, saveTasks } from '@/lib/store';
 import { Task } from '@/types';
+import { formatDistanceToNow, parseISO, isBefore, startOfDay } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 const priorityOrder = { dringend: 0, hoch: 1, mittel: 2, niedrig: 3 };
 const priorityColors: Record<string, string> = {
@@ -11,9 +13,20 @@ const priorityColors: Record<string, string> = {
   niedrig: 'bg-muted text-muted-foreground border-border',
 };
 
+function getOverdueInfo(task: Task): string | null {
+  if (task.completed) return null;
+  const taskDate = parseISO(task.date);
+  const now = startOfDay(new Date());
+  if (isBefore(taskDate, now)) {
+    return formatDistanceToNow(taskDate, { locale: de, addSuffix: false });
+  }
+  return null;
+}
+
 export default function Tasks() {
   const [tasks, setTasks] = useState(getTasks());
   const [showAdd, setShowAdd] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'alle' | 'offen' | 'erledigt'>('alle');
 
   const update = (t: Task[]) => { setTasks(t); saveTasks(t); };
@@ -53,39 +66,66 @@ export default function Tasks() {
       </div>
 
       <div className="space-y-3">
-        {filtered.map(t => (
-          <div key={t.id} className={`glass-card p-4 flex items-center gap-4 ${t.completed ? 'opacity-50' : ''}`}>
-            <button onClick={() => toggle(t.id)} className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-primary border-primary' : 'border-border hover:border-primary'}`}>
-              {t.completed && <Check size={12} className="text-primary-foreground" />}
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.title}</p>
-              {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-xs text-muted-foreground">{t.date}</span>
-                <span className="text-xs text-muted-foreground">{t.time} Uhr</span>
+        {filtered.map(t => {
+          const overdue = getOverdueInfo(t);
+          return (
+            <div key={t.id} className={`glass-card p-4 flex items-center gap-4 ${t.completed ? 'opacity-50' : ''}`}>
+              <button onClick={() => toggle(t.id)} className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-primary border-primary' : 'border-border hover:border-primary'}`}>
+                {t.completed && <Check size={12} className="text-primary-foreground" />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.title}</p>
+                {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="text-xs text-muted-foreground">{t.date}</span>
+                  <span className="text-xs text-muted-foreground">{t.time} Uhr</span>
+                </div>
+                {overdue && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <AlertTriangle size={12} className="text-destructive" />
+                    <span className="text-xs text-destructive font-medium">Überfällig seit {overdue}</span>
+                  </div>
+                )}
               </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityColors[t.priority]}`}>{t.priority}</span>
+              <button onClick={() => setEditingTask(t)} className="text-muted-foreground hover:text-foreground"><Pencil size={16} /></button>
+              <button onClick={() => remove(t.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={16} /></button>
             </div>
-            <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityColors[t.priority]}`}>{t.priority}</span>
-            <button onClick={() => remove(t.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={16} /></button>
-          </div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Keine Aufgaben</p>}
       </div>
 
-      {showAdd && <AddTaskModal onClose={() => setShowAdd(false)} onAdd={(t) => { update([...tasks, t]); setShowAdd(false); }} />}
+      {showAdd && <TaskModal onClose={() => setShowAdd(false)} onSave={(t) => { update([...tasks, t]); setShowAdd(false); }} />}
+      {editingTask && (
+        <TaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSave={(updated) => {
+            update(tasks.map(t => t.id === updated.id ? updated : t));
+            setEditingTask(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function AddTaskModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Task) => void }) {
-  const [form, setForm] = useState({ title: '', description: '', date: new Date().toISOString().split('T')[0], time: '09:00', priority: 'mittel' as Task['priority'] });
+function TaskModal({ onClose, onSave, task }: { onClose: () => void; onSave: (t: Task) => void; task?: Task }) {
+  const isEdit = !!task;
+  const [form, setForm] = useState({
+    title: task?.title ?? '',
+    description: task?.description ?? '',
+    date: task?.date ?? new Date().toISOString().split('T')[0],
+    time: task?.time ?? '09:00',
+    priority: (task?.priority ?? 'mittel') as Task['priority'],
+  });
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="glass-card p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-foreground mb-4">Neue Aufgabe</h2>
+        <h2 className="text-lg font-bold text-foreground mb-4">{isEdit ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}</h2>
         <div className="space-y-3">
           <div>
             <label className="text-sm text-muted-foreground block mb-1">Titel</label>
@@ -117,7 +157,17 @@ function AddTaskModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Task
         </div>
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 py-2 rounded-md text-sm border border-border text-foreground hover:bg-accent transition-colors">Abbrechen</button>
-          <button onClick={() => onAdd({ ...form, id: crypto.randomUUID(), completed: false, createdAt: new Date().toISOString() })} className="flex-1 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Erstellen</button>
+          <button
+            onClick={() => onSave({
+              id: task?.id ?? crypto.randomUUID(),
+              completed: task?.completed ?? false,
+              createdAt: task?.createdAt ?? new Date().toISOString(),
+              ...form,
+            })}
+            className="flex-1 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
+          >
+            {isEdit ? 'Speichern' : 'Erstellen'}
+          </button>
         </div>
       </div>
     </div>
