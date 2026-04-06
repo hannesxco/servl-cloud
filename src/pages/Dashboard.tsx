@@ -1,37 +1,7 @@
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Sparkles, Mail, FolderKanban } from 'lucide-react';
+import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Mail, FolderKanban } from 'lucide-react';
 import { getCustomers, getTasks, getEvents, getFinances, getMails, getProjects } from '@/lib/store';
 import { CalendarEvent } from '@/types';
-
-const QUOTES = [
-  "Dein Kontostand sagt 'nein', aber dein Mindset sagt 'noch nicht'. 🚀",
-  "Hustle so hart, dass dein zukünftiges Ich dir eine Dankeskarte schickt. 💌",
-  "Montag ist nur ein weiterer Tag, um zu zeigen, dass du härter bist als dein Wecker. ⏰",
-  "Verkaufe den Traum. Liefere die Realität. Kassiere die Rechnung. 💰",
-  "Du bist einen Kaltanruf von deinem nächsten 6-stelligen Deal entfernt. Ruf an! 📞",
-  "Kaffee trinken. Empire aufbauen. Repeat. ☕👑",
-  "Wenn jemand sagt 'Das geht nicht' – lächle. Das ist dein Startschuss. 😏",
-  "Deine Komfortzone hat WLAN. Trotzdem: Raus da! 🏃‍♂️",
-  "Jeder Millionär hat irgendwann mal mit 0 angefangen. Du bist auf dem Weg. 📈",
-  "Schlaf ist optional. Erfolg nicht. (Okay, schlaf trotzdem.) 😴💪",
-  "Die beste Marketing-Strategie? Aufstehen und liefern. Jeden. Einzelnen. Tag. 🔥",
-  "Dein nächster Kunde scrollt gerade durch LinkedIn. Zeig dich! 🎯",
-  "Stress ist nur der Beweis, dass du etwas Großes aufbaust. Mach weiter! 🏗️",
-  "Fake it till you make it? Nein – Build it till they can't ignore it. 🛠️",
-  "Revenue ist Applaus. Profit ist Standing Ovation. Cash ist die Zugabe. 🎭",
-  "Hannes, du bist nicht selbstständig – du bist SELBST-STÄNDIG. Und das ist geil. 🦁",
-  "Wer nicht automatisiert, arbeitet für seine Arbeit. Let the agents work! 🤖",
-  "Dein Business ist wie ein Gym-Abo: Nur effektiv, wenn du auch hingehst. 🏋️",
-  "Plot Twist: Der nächste große Player in der Branche bist du. 🎬",
-  "Emails beantworten ist kein Hustle. Deals closen ist Hustle. 🤝",
-];
-
-function getDailyQuote(): string {
-  const now = new Date();
-  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
-  return QUOTES[dayOfYear % QUOTES.length];
-}
 
 export default function Dashboard() {
   const customers = getCustomers();
