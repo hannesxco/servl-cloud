@@ -252,12 +252,9 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
     // For non-todo columns, we move it after creation
     if (status !== 'todo') {
       setTimeout(() => {
-        const projects = getProjects();
-        const p = projects.find(pr => pr.id === project.id);
-        if (p) {
-          const lastTask = p.tasks[p.tasks.length - 1];
-          if (lastTask) onMoveTask(lastTask.id, status);
-        }
+        const lastTask = project.tasks[project.tasks.length - 1];
+        if (lastTask) onMoveTask(lastTask.id, status);
+      }, 50);
       }, 50);
     }
   };
