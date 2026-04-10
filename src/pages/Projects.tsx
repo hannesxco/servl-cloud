@@ -10,16 +10,16 @@ const KANBAN_COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
 ];
 
 export default function Projects() {
-  const [projects, setProjects] = useState(getProjects());
-  const [tags, setTags] = useState(getProjectTags());
+  const { projects, saveProjects } = useProjects();
+  const { tags, saveTags } = useProjectTags();
   const [showAddProject, setShowAddProject] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
-  const update = (p: Project[]) => { setProjects(p); saveProjects(p); };
-  const updateTags = (t: ProjectTag[]) => { setTags(t); saveProjectTags(t); };
+  const update = (p: Project[]) => { saveProjects(p); };
+  const updateTags = (t: ProjectTag[]) => { saveTags(t); };
 
   const filtered = filterTag
     ? projects.filter(p => p.tags.includes(filterTag))
