@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { CloudStoreProvider, useCloudStore } from "@/lib/cloud-store";
 import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -21,10 +22,11 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+function AppContent() {
   const [loggedIn, setLoggedIn] = useState(() => {
     return sessionStorage.getItem('sc_auth') === 'true';
   });
+  const { loading } = useCloudStore();
 
   const handleLogin = () => {
     sessionStorage.setItem('sc_auth', 'true');
@@ -37,40 +39,51 @@ const App = () => {
   };
 
   if (!loggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  if (loading) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Login onLogin={handleLogin} />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Daten werden geladen...</p>
+        </div>
+      </div>
     );
   }
 
+  return (
+    <BrowserRouter>
+      <AppLayout onLogout={handleLogout}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/crm" element={<CRM />} />
+          <Route path="/crm/:id" element={<CustomerDetail />} />
+          <Route path="/finanzen" element={<Finances />} />
+          <Route path="/pipeline" element={<Pipeline />} />
+          <Route path="/aufgaben" element={<Tasks />} />
+          <Route path="/kalender" element={<CalendarView />} />
+          <Route path="/agents" element={<Agents />} />
+          <Route path="/rechnungen" element={<Invoices />} />
+          <Route path="/projekte" element={<Projects />} />
+          <Route path="/mail" element={<Mail />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AppLayout>
+    </BrowserRouter>
+  );
+}
+
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <AppLayout onLogout={handleLogout}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/crm" element={<CRM />} />
-              <Route path="/crm/:id" element={<CustomerDetail />} />
-              <Route path="/finanzen" element={<Finances />} />
-              <Route path="/pipeline" element={<Pipeline />} />
-              <Route path="/aufgaben" element={<Tasks />} />
-              <Route path="/kalender" element={<CalendarView />} />
-              <Route path="/agents" element={<Agents />} />
-              <Route path="/rechnungen" element={<Invoices />} />
-              <Route path="/projekte" element={<Projects />} />
-              <Route path="/mail" element={<Mail />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
-        </BrowserRouter>
+        <CloudStoreProvider>
+          <AppContent />
+        </CloudStoreProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

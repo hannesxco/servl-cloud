@@ -1,40 +1,38 @@
 import { useState, useRef } from 'react';
 import { Plus, FileText, Trash2, X, Upload, Eye } from 'lucide-react';
-import { getUploadedInvoices, saveUploadedInvoices, getCustomers, saveCustomers, getFinances, saveFinances } from '@/lib/store';
+import { useUploadedInvoices, useCustomers, useFinances } from '@/lib/cloud-store';
 import { UploadedInvoice } from '@/types';
 
 export default function Invoices() {
-  const [invoices, setInvoices] = useState(getUploadedInvoices());
+  const { invoices, saveInvoices } = useUploadedInvoices();
+  const { customers, saveCustomers } = useCustomers();
+  const { finances, saveFinances } = useFinances();
   const [showUpload, setShowUpload] = useState(false);
   const [preview, setPreview] = useState<UploadedInvoice | null>(null);
 
-  const update = (i: UploadedInvoice[]) => { setInvoices(i); saveUploadedInvoices(i); };
+  const update = (i: UploadedInvoice[]) => { saveInvoices(i); };
 
   const syncInvoiceToFinancesAndCustomer = (inv: UploadedInvoice) => {
-    // Sync to finances: add amount to monthly revenues
-    const finances = getFinances();
-    const invoiceMonth = inv.date.slice(0, 7); // YYYY-MM
-    finances.monthlyRevenues[invoiceMonth] = (finances.monthlyRevenues[invoiceMonth] || 0) + inv.amount;
-    saveFinances(finances);
+    const invoiceMonth = inv.date.slice(0, 7);
+    const updatedFinances = {
+      ...finances,
+      monthlyRevenues: { ...finances.monthlyRevenues, [invoiceMonth]: (finances.monthlyRevenues[invoiceMonth] || 0) + inv.amount }
+    };
+    saveFinances(updatedFinances);
 
-    // Sync to customer: add invoice and update revenue
-    const customers = getCustomers();
     const customerIdx = customers.findIndex(c => c.id === inv.customerId);
     if (customerIdx >= 0) {
       const customer = { ...customers[customerIdx] };
       customer.invoices = [...customer.invoices, {
-        id: inv.id,
-        date: inv.date,
-        amount: inv.amount,
-        status: 'offen' as const,
-        description: inv.purpose || inv.fileName,
+        id: inv.id, date: inv.date, amount: inv.amount, status: 'offen' as const, description: inv.purpose || inv.fileName,
       }];
       customer.monthlyRevenue = { ...customer.monthlyRevenue };
       const month = inv.date.slice(0, 7);
       customer.monthlyRevenue[month] = (customer.monthlyRevenue[month] || 0) + inv.amount;
       customer.totalRevenue = Object.values(customer.monthlyRevenue).reduce((s, v) => s + v, 0);
-      customers[customerIdx] = customer;
-      saveCustomers(customers);
+      const updatedCustomers = [...customers];
+      updatedCustomers[customerIdx] = customer;
+      saveCustomers(updatedCustomers);
     }
   };
 
@@ -97,14 +95,13 @@ export default function Invoices() {
         </div>
       )}
 
-      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUpload={(inv) => { update([...invoices, inv]); syncInvoiceToFinancesAndCustomer(inv); setShowUpload(false); }} />}
+      {showUpload && <UploadModal customers={customers} onClose={() => setShowUpload(false)} onUpload={(inv) => { update([...invoices, inv]); syncInvoiceToFinancesAndCustomer(inv); setShowUpload(false); }} />}
       {preview && <PreviewModal invoice={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }
 
-function UploadModal({ onClose, onUpload }: { onClose: () => void; onUpload: (inv: UploadedInvoice) => void }) {
-  const customers = getCustomers();
+function UploadModal({ customers, onClose, onUpload }: { customers: any[]; onClose: () => void; onUpload: (inv: UploadedInvoice) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ customerId: '', amount: '', purpose: '', date: new Date().toISOString().split('T')[0], keypoints: '' });
   const [fileName, setFileName] = useState('');
@@ -117,7 +114,6 @@ function UploadModal({ onClose, onUpload }: { onClose: () => void; onUpload: (in
     const reader = new FileReader();
     reader.onload = () => {
       setFileData(reader.result as string);
-      // Auto-extract keypoints from filename
       const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
       const parts = nameWithoutExt.split(/[-_\s]+/).filter(Boolean);
       if (!form.keypoints) {
@@ -174,14 +170,9 @@ function UploadModal({ onClose, onUpload }: { onClose: () => void; onUpload: (in
           <button
             disabled={!fileData || !form.customerId}
             onClick={() => onUpload({
-              id: crypto.randomUUID(),
-              fileName,
-              fileData,
-              customerId: form.customerId,
-              customerName: customer?.name || '',
-              amount: parseFloat(form.amount) || 0,
-              purpose: form.purpose,
-              date: form.date,
+              id: crypto.randomUUID(), fileName, fileData, customerId: form.customerId,
+              customerName: customer?.name || '', amount: parseFloat(form.amount) || 0,
+              purpose: form.purpose, date: form.date,
               keypoints: form.keypoints.split(',').map(k => k.trim()).filter(Boolean),
               uploadedAt: new Date().toISOString(),
             })}

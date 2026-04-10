@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Bot, Trash2, X, Phone, Key, FileText, ChevronLeft, Save, Pencil } from 'lucide-react';
-import { getAgents, saveAgents, getCustomers } from '@/lib/store';
+import { useAgents, useCustomers } from '@/lib/cloud-store';
 import { Agent } from '@/types';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -11,13 +11,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default function Agents() {
-  const [agents, setAgents] = useState(getAgents());
+  const { agents, saveAgents } = useAgents();
   const [showAdd, setShowAdd] = useState(false);
   const [openAgent, setOpenAgent] = useState<Agent | null>(null);
 
-  const update = (a: Agent[]) => { setAgents(a); saveAgents(a); };
+  const update = (a: Agent[]) => { saveAgents(a); };
 
-  // Full-screen workspace view
   if (openAgent) {
     return (
       <AgentWorkspace
@@ -76,9 +75,8 @@ export default function Agents() {
   );
 }
 
-/* ========== FULL-SCREEN WORKSPACE ========== */
 function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onBack: () => void; onSave: (a: Agent) => void; onDelete: () => void }) {
-  const customers = getCustomers();
+  const { customers } = useCustomers();
   const customer = customers.find(c => c.id === agent.customerId);
   const st = STATUS_LABELS[agent.status];
 
@@ -111,7 +109,6 @@ function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onB
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -134,9 +131,7 @@ function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onB
         </div>
       </div>
 
-      {/* Workspace split */}
       <div className="flex flex-1 min-h-0">
-        {/* LEFT: Prompt Editor */}
         <div className="flex-1 flex flex-col border-r border-border min-w-0">
           <div className="px-4 py-2 border-b border-border flex items-center gap-2">
             <FileText size={14} className="text-muted-foreground" />
@@ -152,57 +147,28 @@ function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onB
           </div>
         </div>
 
-        {/* RIGHT: Knowledge Base, APIs, Info */}
         <div className="w-[400px] shrink-0 overflow-auto bg-secondary/20">
           <div className="p-4 space-y-5">
-            {/* Description */}
             <Section title="Beschreibung">
-              <textarea
-                value={description}
-                onChange={e => { setDescription(e.target.value); markChanged(); }}
-                placeholder="Beschreibung des Agents..."
-                rows={2}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
+              <textarea value={description} onChange={e => { setDescription(e.target.value); markChanged(); }} placeholder="Beschreibung des Agents..." rows={2} className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </Section>
-
-            {/* Status */}
             <Section title="Status">
               <select value={status} onChange={e => { setStatus(e.target.value as Agent['status']); markChanged(); }} className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                 {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
             </Section>
-
-            {/* Kunde */}
             <Section title="Kunde">
               <select value={customerId} onChange={e => { setCustomerId(e.target.value); markChanged(); }} className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="">– Kein Kunde –</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.company})</option>)}
               </select>
             </Section>
-
-            {/* Knowledgebase */}
             <Section title="Knowledge Base">
-              <textarea
-                value={knowledgebase}
-                onChange={e => { setKnowledgebase(e.target.value); markChanged(); }}
-                placeholder="Wissensgrundlage, Fakten, FAQ..."
-                rows={5}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
+              <textarea value={knowledgebase} onChange={e => { setKnowledgebase(e.target.value); markChanged(); }} placeholder="Wissensgrundlage, Fakten, FAQ..." rows={5} className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </Section>
-
-            {/* Telefon */}
             <Section title="Telefonnummer">
-              <input
-                value={phone}
-                onChange={e => { setPhone(e.target.value); markChanged(); }}
-                placeholder="+49 ..."
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
+              <input value={phone} onChange={e => { setPhone(e.target.value); markChanged(); }} placeholder="+49 ..." className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
             </Section>
-
-            {/* API Keys */}
             <Section title="API Keys">
               <div className="space-y-1.5 mb-2">
                 {apiKeys.map((api, idx) => (
@@ -221,16 +187,8 @@ function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onB
                 <button onClick={addApi} className="text-xs bg-primary text-primary-foreground px-2.5 py-1.5 rounded font-medium hover:opacity-90">+</button>
               </div>
             </Section>
-
-            {/* Notizen */}
             <Section title="Notizen">
-              <textarea
-                value={notes}
-                onChange={e => { setNotes(e.target.value); markChanged(); }}
-                placeholder="Interne Notizen..."
-                rows={3}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
+              <textarea value={notes} onChange={e => { setNotes(e.target.value); markChanged(); }} placeholder="Interne Notizen..." rows={3} className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </Section>
           </div>
         </div>
@@ -248,7 +206,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-/* ========== CREATE MODAL (simple) ========== */
 function AgentCreateModal({ onClose, onSave }: { onClose: () => void; onSave: (a: Agent) => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -270,16 +227,8 @@ function AgentCreateModal({ onClose, onSave }: { onClose: () => void; onSave: (a
             onClick={() => {
               if (!name.trim()) return;
               onSave({
-                id: crypto.randomUUID(),
-                name: name.trim(),
-                description,
-                prompt: '',
-                knowledgebase: '',
-                phone: '',
-                apiKeys: [],
-                status: 'planung',
-                notes: '',
-                createdAt: new Date().toISOString().split('T')[0],
+                id: crypto.randomUUID(), name: name.trim(), description, prompt: '', knowledgebase: '',
+                phone: '', apiKeys: [], status: 'planung', notes: '', createdAt: new Date().toISOString().split('T')[0],
               });
             }}
             className="flex-1 py-2 rounded-md text-xs bg-primary text-primary-foreground font-medium hover:opacity-90"

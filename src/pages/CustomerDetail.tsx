@@ -1,14 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowLeft, Phone, Mail, MapPin, ExternalLink, Bot, FileText, Pencil } from 'lucide-react';
-import { getCustomers, saveCustomers } from '@/lib/store';
+import { useCustomers } from '@/lib/cloud-store';
 import { Customer } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function CustomerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [customers, setCustomers] = useState(getCustomers());
+  const { customers, saveCustomers } = useCustomers();
   const customer = customers.find(c => c.id === id);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -20,9 +20,7 @@ export default function CustomerDetail() {
   );
 
   const handleSave = (updated: Customer) => {
-    const newCustomers = customers.map(c => c.id === updated.id ? updated : c);
-    setCustomers(newCustomers);
-    saveCustomers(newCustomers);
+    saveCustomers(customers.map(c => c.id === updated.id ? updated : c));
     setShowEdit(false);
   };
 
@@ -48,7 +46,6 @@ export default function CustomerDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Chart */}
         <div className="lg:col-span-2 glass-card p-6">
           <h2 className="font-semibold text-foreground mb-4">Umsatz nach Monaten</h2>
           <ResponsiveContainer width="100%" height={250}>
@@ -62,7 +59,6 @@ export default function CustomerDetail() {
           </ResponsiveContainer>
         </div>
 
-        {/* Contact Info */}
         <div className="glass-card p-6 space-y-4">
           <h2 className="font-semibold text-foreground">Kontakt</h2>
           <div className="space-y-3">
@@ -73,14 +69,7 @@ export default function CustomerDetail() {
           <div className="mt-4">
             <h3 className="text-sm text-muted-foreground mb-2">Standort</h3>
             <div className="w-full h-40 rounded-md bg-secondary flex items-center justify-center overflow-hidden">
-              <iframe
-                title="map"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                loading="lazy"
-                src={`https://www.google.com/maps?q=${encodeURIComponent(customer.address)}&output=embed`}
-              />
+              <iframe title="map" width="100%" height="100%" style={{ border: 0 }} loading="lazy" src={`https://www.google.com/maps?q=${encodeURIComponent(customer.address)}&output=embed`} />
             </div>
           </div>
           {customer.notes && (
@@ -91,7 +80,6 @@ export default function CustomerDetail() {
           )}
         </div>
 
-        {/* Voice Agents */}
         <div className="lg:col-span-2 glass-card p-6">
           <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2"><Bot size={18} className="text-muted-foreground" />Aktive Voice Agents</h2>
           {customer.voiceAgents.length === 0 ? (
@@ -116,7 +104,6 @@ export default function CustomerDetail() {
           )}
         </div>
 
-        {/* Invoices */}
         <div className="glass-card p-6">
           <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2"><FileText size={18} className="text-muted-foreground" />Rechnungen</h2>
           {customer.invoices.length === 0 ? (
@@ -165,11 +152,7 @@ function EditCustomerModal({ customer, onClose, onSave }: { customer: Customer; 
           ].map(({ k, l }) => (
             <div key={k}>
               <label className="text-sm text-muted-foreground block mb-1">{l}</label>
-              <input
-                value={(form as any)[k]}
-                onChange={e => set(k, e.target.value)}
-                className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
+              <input value={(form as any)[k]} onChange={e => set(k, e.target.value)} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
             </div>
           ))}
           <div>

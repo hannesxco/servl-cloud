@@ -1,12 +1,12 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, MapPin, Euro, Clock, Pencil, Trash2, Upload, X } from 'lucide-react';
-import { getCustomers, saveCustomers } from '@/lib/store';
+import { useCustomers } from '@/lib/cloud-store';
 import { Customer } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function CRM() {
-  const [customers, setCustomers] = useState(getCustomers());
+  const { customers, saveCustomers } = useCustomers();
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
@@ -25,7 +25,6 @@ export default function CRM() {
   };
 
   const updateCustomers = (updated: Customer[]) => {
-    setCustomers(updated);
     saveCustomers(updated);
   };
 
@@ -160,7 +159,6 @@ function CustomerModal({ customer, onClose, onSave }: { customer?: Customer; onC
       <div className="glass-card p-6 w-full max-w-lg max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-foreground mb-4">{isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2>
 
-        {/* Profile Picture Upload */}
         <div className="mb-4">
           <label className="text-sm text-muted-foreground block mb-2">Profilbild</label>
           <div className="flex items-center gap-4">
