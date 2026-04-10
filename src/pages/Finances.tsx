@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { Euro, TrendingUp, Wallet, ArrowDown, ArrowUp, Plus, Trash2, Pencil, X, Save } from 'lucide-react';
-import { getFinances, saveFinances } from '@/lib/store';
+import { useFinances } from '@/lib/cloud-store';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { FinanceData, Expense } from '@/types';
 
 export default function Finances() {
-  const [finances, setFinances] = useState(getFinances());
+  const { finances, saveFinances } = useFinances();
   const [showBalanceEdit, setShowBalanceEdit] = useState(false);
   const [showRevenueAdd, setShowRevenueAdd] = useState(false);
   const [showFixCostAdd, setShowFixCostAdd] = useState(false);
   const [showVarCostAdd, setShowVarCostAdd] = useState(false);
   const [showIncomeAdd, setShowIncomeAdd] = useState(false);
 
-  const update = (f: FinanceData) => { setFinances(f); saveFinances(f); };
+  const update = (f: FinanceData) => { saveFinances(f); };
 
   const mrr = finances.fixedMonthlyIncome.reduce((s, i) => s + i.amount, 0);
   const totalFixCosts = finances.fixedMonthlyCosts.reduce((s, c) => s + c.amount, 0);
@@ -47,7 +47,6 @@ export default function Finances() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart */}
         <div className="lg:col-span-2 glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground">Monatliche Umsätze</h2>
@@ -68,7 +67,6 @@ export default function Finances() {
           )}
         </div>
 
-        {/* Expenses by Category */}
         <div className="glass-card p-6">
           <h2 className="font-semibold text-foreground mb-4">Ausgaben nach Kategorien</h2>
           {Object.keys(expensesByCategory).length > 0 ? (
@@ -83,7 +81,6 @@ export default function Finances() {
           ) : <p className="text-sm text-muted-foreground">Keine Ausgaben</p>}
         </div>
 
-        {/* Fixed Monthly Income */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2"><ArrowUp size={16} className="text-success" />Fixe monatl. Einnahmen</h2>
@@ -106,7 +103,6 @@ export default function Finances() {
           </div>
         </div>
 
-        {/* Fixed Monthly Costs */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2"><ArrowDown size={16} className="text-destructive" />Fixe monatl. Kosten</h2>
@@ -129,7 +125,6 @@ export default function Finances() {
           </div>
         </div>
 
-        {/* Variable Monthly Costs */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2"><ArrowDown size={16} className="text-warning" />Variable monatl. Kosten</h2>
@@ -153,7 +148,6 @@ export default function Finances() {
         </div>
       </div>
 
-      {/* Modals */}
       {showBalanceEdit && <EditValueModal title="Kontostand bearbeiten" label="Neuer Kontostand (€)" initial={finances.currentBalance} onClose={() => setShowBalanceEdit(false)} onSave={(v) => { update({ ...finances, currentBalance: v }); setShowBalanceEdit(false); }} />}
       {showRevenueAdd && <AddRevenueModal onClose={() => setShowRevenueAdd(false)} onSave={(month, amount) => { update({ ...finances, monthlyRevenues: { ...finances.monthlyRevenues, [month]: (finances.monthlyRevenues[month] || 0) + amount } }); setShowRevenueAdd(false); }} />}
       {showFixCostAdd && <AddExpenseModal title="Fixe Kosten hinzufügen" type="fix" onClose={() => setShowFixCostAdd(false)} onSave={(e) => { update({ ...finances, fixedMonthlyCosts: [...finances.fixedMonthlyCosts, e] }); setShowFixCostAdd(false); }} />}

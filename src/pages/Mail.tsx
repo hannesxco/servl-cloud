@@ -1,19 +1,19 @@
 import { useState, useMemo } from 'react';
 import { Search, Plus, Send, Inbox, FileEdit, Mail as MailIcon, ArrowLeft, Trash2, User } from 'lucide-react';
-import { getMails, saveMails, getCustomers } from '@/lib/store';
+import { useMails, useCustomers } from '@/lib/cloud-store';
 import { MailMessage, Customer } from '@/types';
 
 type Folder = 'inbox' | 'sent' | 'drafts';
 
 export default function Mail() {
-  const [mails, setMails] = useState(getMails());
+  const { mails, saveMails } = useMails();
+  const { customers } = useCustomers();
   const [folder, setFolder] = useState<Folder>('inbox');
   const [search, setSearch] = useState('');
   const [selectedMail, setSelectedMail] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
-  const customers = useMemo(() => getCustomers(), []);
 
-  const update = (m: MailMessage[]) => { setMails(m); saveMails(m); };
+  const update = (m: MailMessage[]) => { saveMails(m); };
 
   const folderMails = mails
     .filter(m => m.folder === folder)
@@ -41,7 +41,6 @@ export default function Mail() {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar */}
       <div className="w-56 border-r border-border p-4 flex flex-col shrink-0">
         <button onClick={() => setShowCompose(true)} className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity mb-4 w-full">
           <Plus size={16} /> Verfassen
@@ -61,7 +60,6 @@ export default function Mail() {
         </nav>
       </div>
 
-      {/* Mail List / Detail */}
       <div className="flex-1 flex flex-col">
         {selectedMail && activeMail ? (
           <MailDetail mail={activeMail} onBack={() => setSelectedMail(null)} onDelete={() => deleteMail(activeMail.id)} />
@@ -152,17 +150,9 @@ function ComposeModal({ customers, onClose, onSend }: { customers: Customer[]; o
   const send = () => {
     if (!to.trim() || !subject.trim()) return;
     const mail: MailMessage = {
-      id: crypto.randomUUID(),
-      from: 'schumacherhannes967@gmail.com',
-      fromName: 'Hannes Schumacher',
-      to: to.trim(),
-      toName: toName.trim(),
-      subject: subject.trim(),
-      body: body.trim(),
-      date: new Date().toISOString(),
-      read: true,
-      folder: 'sent',
-      customerId,
+      id: crypto.randomUUID(), from: 'schumacherhannes967@gmail.com', fromName: 'Hannes Schumacher',
+      to: to.trim(), toName: toName.trim(), subject: subject.trim(), body: body.trim(),
+      date: new Date().toISOString(), read: true, folder: 'sent', customerId,
     };
     onSend(mail);
   };
@@ -171,7 +161,6 @@ function ComposeModal({ customers, onClose, onSend }: { customers: Customer[]; o
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="glass-card p-6 w-full max-w-2xl max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-foreground mb-4">Neue E-Mail</h2>
-
         <div className="space-y-3">
           <div>
             <label className="text-sm text-muted-foreground block mb-1">An</label>
@@ -201,7 +190,6 @@ function ComposeModal({ customers, onClose, onSend }: { customers: Customer[]; o
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={8} className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
           </div>
         </div>
-
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 py-2 rounded-md text-sm border border-border text-foreground hover:bg-accent transition-colors">Abbrechen</button>
           <button onClick={send} className="flex-1 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 flex items-center justify-center gap-2">

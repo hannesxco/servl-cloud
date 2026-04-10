@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Phone, Mail, MapPin, Euro, Trash2, X, ChevronRight } from 'lucide-react';
-import { getPipeline, savePipeline } from '@/lib/store';
+import { usePipeline } from '@/lib/cloud-store';
 import { PipelineContact } from '@/types';
 
 const stages = [
@@ -13,12 +13,12 @@ const stages = [
 ] as const;
 
 export default function Pipeline() {
-  const [contacts, setContacts] = useState(getPipeline());
+  const { pipeline: contacts, savePipeline } = usePipeline();
   const [showAdd, setShowAdd] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<PipelineContact | null>(null);
 
-  const update = (updated: PipelineContact[]) => { setContacts(updated); savePipeline(updated); };
+  const update = (updated: PipelineContact[]) => { savePipeline(updated); };
 
   const moveToStage = (id: string, stage: PipelineContact['stage']) => {
     update(contacts.map(c => c.id === id ? { ...c, stage } : c));

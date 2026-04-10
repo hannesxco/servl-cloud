@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Mail, FolderKanban } from 'lucide-react';
-import { getCustomers, getTasks, getEvents, getFinances, getMails, getProjects } from '@/lib/store';
+import { useCustomers, useTasks, useEvents, useFinances, useMails, useProjects } from '@/lib/cloud-store';
 import { CalendarEvent } from '@/types';
 
 export default function Dashboard() {
-  const customers = getCustomers();
-  const tasks = getTasks();
-  const events = getEvents();
-  const finances = getFinances();
-  const mails = getMails();
-  const projects = getProjects();
+  const { customers } = useCustomers();
+  const { tasks } = useTasks();
+  const { events } = useEvents();
+  const { finances } = useFinances();
+  const { mails } = useMails();
+  const { projects } = useProjects();
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -24,8 +24,6 @@ export default function Dashboard() {
     return prog < 1;
   }).slice(0, 3);
 
-  
-
   return (
     <div className="p-8">
       <div className="mb-6">
@@ -33,8 +31,6 @@ export default function Dashboard() {
         <p className="text-muted-foreground text-sm mt-1">Hier ist deine Übersicht für heute</p>
       </div>
 
-
-      {/* Stats with colored accents */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={Euro} label="Monatsumsatz" value={`€${monthlyRevenue.toLocaleString('de-DE')}`} sub={currentMonth} color="green" />
         <StatCard icon={Wallet} label="Kontostand" value={`€${finances.currentBalance.toLocaleString('de-DE')}`} sub="Aktuell" color="yellow" />
@@ -43,7 +39,6 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Calendar View */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2">
@@ -55,7 +50,6 @@ export default function Dashboard() {
           <DayTimeline events={todayEvents} />
         </div>
 
-        {/* Today's Tasks */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2"><CheckSquare size={18} className="text-brand-green" />Heutige Aufgaben</h2>
@@ -78,7 +72,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* E-Mail Mini Briefing */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2"><Mail size={18} className="text-brand-purple" />E-Mail</h2>
@@ -101,7 +94,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Active Projects */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-foreground flex items-center gap-2"><FolderKanban size={18} className="text-brand-yellow" />Projekte</h2>

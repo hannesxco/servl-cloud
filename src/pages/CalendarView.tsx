@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil } from 'lucide-react';
-import { getEvents, saveEvents, getCalendars, saveCalendars } from '@/lib/store';
+import { useEvents, useCalendars } from '@/lib/cloud-store';
 import { CalendarEvent, CalendarCategory } from '@/types';
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -33,8 +33,8 @@ function getDateStr(d: Date) {
 }
 
 export default function CalendarView() {
-  const [events, setEvents] = useState(getEvents());
-  const [calendars, setCalendars] = useState(getCalendars());
+  const { events, saveEvents } = useEvents();
+  const { calendars, saveCalendars } = useCalendars();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<ViewMode>('week');
   const [showAdd, setShowAdd] = useState(false);
@@ -49,8 +49,8 @@ export default function CalendarView() {
   const month = currentDate.getMonth();
   const today = getDateStr(new Date());
 
-  const updateEvents = (e: CalendarEvent[]) => { setEvents(e); saveEvents(e); };
-  const updateCalendars = (c: CalendarCategory[]) => { setCalendars(c); saveCalendars(c); setVisibleCals(new Set(c.map(x => x.id))); };
+  const updateEvents = (e: CalendarEvent[]) => { saveEvents(e); };
+  const updateCalendars = (c: CalendarCategory[]) => { saveCalendars(c); setVisibleCals(new Set(c.map(x => x.id))); };
 
 
   const filteredEvents = events.filter(e => visibleCals.has(e.calendarId));

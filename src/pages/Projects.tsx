@@ -1,6 +1,6 @@
 import { useState, DragEvent } from 'react';
 import { Plus, Tag, CheckCircle2, Circle, Trash2, ChevronRight, ChevronDown, BarChart3, X, LayoutList, Columns3, GripVertical } from 'lucide-react';
-import { getProjects, saveProjects, getProjectTags, saveProjectTags } from '@/lib/store';
+import { useProjects, useProjectTags } from '@/lib/cloud-store';
 import { Project, ProjectTask, ProjectTag, TaskStatus } from '@/types';
 
 const KANBAN_COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
@@ -10,16 +10,16 @@ const KANBAN_COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
 ];
 
 export default function Projects() {
-  const [projects, setProjects] = useState(getProjects());
-  const [tags, setTags] = useState(getProjectTags());
+  const { projects, saveProjects } = useProjects();
+  const { tags, saveTags } = useProjectTags();
   const [showAddProject, setShowAddProject] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
-  const update = (p: Project[]) => { setProjects(p); saveProjects(p); };
-  const updateTags = (t: ProjectTag[]) => { setTags(t); saveProjectTags(t); };
+  const update = (p: Project[]) => { saveProjects(p); };
+  const updateTags = (t: ProjectTag[]) => { saveTags(t); };
 
   const filtered = filterTag
     ? projects.filter(p => p.tags.includes(filterTag))
@@ -252,12 +252,8 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
     // For non-todo columns, we move it after creation
     if (status !== 'todo') {
       setTimeout(() => {
-        const projects = getProjects();
-        const p = projects.find(pr => pr.id === project.id);
-        if (p) {
-          const lastTask = p.tasks[p.tasks.length - 1];
-          if (lastTask) onMoveTask(lastTask.id, status);
-        }
+        const lastTask = project.tasks[project.tasks.length - 1];
+        if (lastTask) onMoveTask(lastTask.id, status);
       }, 50);
     }
   };

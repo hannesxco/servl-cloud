@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Check, Trash2, Pencil, AlertTriangle } from 'lucide-react';
-import { getTasks, saveTasks } from '@/lib/store';
+import { useTasks } from '@/lib/cloud-store';
 import { Task } from '@/types';
 import { formatDistanceToNow, parseISO, isBefore, startOfDay } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -24,12 +24,12 @@ function getOverdueInfo(task: Task): string | null {
 }
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState(getTasks());
+  const { tasks, saveTasks } = useTasks();
   const [showAdd, setShowAdd] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'alle' | 'offen' | 'erledigt'>('alle');
 
-  const update = (t: Task[]) => { setTasks(t); saveTasks(t); };
+  const update = (t: Task[]) => { saveTasks(t); };
 
   const toggle = (id: string) => update(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
   const remove = (id: string) => update(tasks.filter(t => t.id !== id));
