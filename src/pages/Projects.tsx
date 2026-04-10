@@ -255,7 +255,6 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
         const lastTask = project.tasks[project.tasks.length - 1];
         if (lastTask) onMoveTask(lastTask.id, status);
       }, 50);
-      }, 50);
     }
   };
 
