@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Settings, X, Pencil } from 'lucide-react';
-import { getEvents, saveEvents, getCalendars, saveCalendars } from '@/lib/store';
+import { useEvents, useCalendars } from '@/lib/cloud-store';
 import { CalendarEvent, CalendarCategory } from '@/types';
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];

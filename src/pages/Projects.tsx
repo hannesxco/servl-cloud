@@ -1,6 +1,6 @@
 import { useState, DragEvent } from 'react';
 import { Plus, Tag, CheckCircle2, Circle, Trash2, ChevronRight, ChevronDown, BarChart3, X, LayoutList, Columns3, GripVertical } from 'lucide-react';
-import { getProjects, saveProjects, getProjectTags, saveProjectTags } from '@/lib/store';
+import { useProjects, useProjectTags } from '@/lib/cloud-store';
 import { Project, ProjectTask, ProjectTag, TaskStatus } from '@/types';
 
 const KANBAN_COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
