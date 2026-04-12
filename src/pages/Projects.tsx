@@ -285,7 +285,7 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
               onDragOver={(e) => handleDragOver(e, col.status)}
               onDragLeave={() => setDragOverCol(null)}
               onDrop={(e) => handleDrop(e, col.status)}
-              className={`rounded-xl p-3 min-h-[200px] transition-colors ${isDragOver ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-secondary/50'}`}
+              className={`rounded-xl p-3 min-h-[200px] min-w-[200px] flex-shrink-0 md:flex-shrink md:min-w-0 transition-colors ${isDragOver ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-secondary/50'}`}
             >
               {/* Column header */}
               <div className="flex items-center justify-between mb-3">
