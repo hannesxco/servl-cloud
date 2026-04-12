@@ -109,15 +109,14 @@ export function CloudStoreProvider({ children }: { children: ReactNode }) {
           if (isCloudEmpty) {
             // Local has data, cloud is empty → migrate
             (loaded as any)[key] = localValue;
-            migratePromises.push(
-              supabase
+            const p = (async () => {
+              const { error } = await supabase
                 .from('app_data')
-                .upsert({ key, value: localValue as any, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-                .then(({ error }) => {
-                  if (error) console.error(`Migration failed for ${key}:`, error);
-                  else console.log(`Migrated ${key} from localStorage to cloud`);
-                })
-            );
+                .upsert({ key, value: localValue as any, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+              if (error) console.error(`Migration failed for ${key}:`, error);
+              else console.log(`Migrated ${key} from localStorage to cloud`);
+            })();
+            migratePromises.push(p);
           }
         }
 
