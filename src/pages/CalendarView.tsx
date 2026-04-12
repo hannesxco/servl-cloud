@@ -107,9 +107,9 @@ export default function CalendarView() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header - Notion style */}
-      <div className="px-6 pt-4 pb-2 flex items-center justify-between border-b border-border">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold text-foreground">{headerLabel()}</h1>
+      <div className="px-3 md:px-6 pt-3 md:pt-4 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border">
+        <div className="flex items-center gap-2 md:gap-4">
+          <h1 className="text-base md:text-xl font-semibold text-foreground">{headerLabel()}</h1>
           <div className="flex items-center gap-1">
             <button onClick={prev} className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground"><ChevronLeft size={18} /></button>
             <button onClick={goToday} className="text-xs px-2.5 py-1 rounded border border-border hover:bg-accent transition-colors text-foreground font-medium">Heute</button>
@@ -119,7 +119,7 @@ export default function CalendarView() {
         <div className="flex items-center gap-2">
           <div className="flex bg-secondary rounded-md p-0.5">
             {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
-              <button key={v} onClick={() => setView(v)} className={`text-xs px-3 py-1 rounded transition-colors ${view === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              <button key={v} onClick={() => setView(v)} className={`text-xs px-2 md:px-3 py-1 rounded transition-colors ${view === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                 {v === 'day' ? 'Tag' : v === 'week' ? 'Woche' : v === 'month' ? 'Monat' : 'Jahr'}
               </button>
             ))}
@@ -132,7 +132,7 @@ export default function CalendarView() {
       {/* Main */}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <div className="w-44 shrink-0 border-r border-border p-3 space-y-1 overflow-auto">
+        <div className="hidden md:block w-44 shrink-0 border-r border-border p-3 space-y-1 overflow-auto">
           <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Kalender</p>
           {calendars.map(cal => (
             <label key={cal.id} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-accent cursor-pointer text-xs text-foreground">

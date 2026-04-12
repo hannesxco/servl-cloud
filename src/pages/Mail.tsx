@@ -40,12 +40,12 @@ export default function Mail() {
   ];
 
   return (
-    <div className="flex h-full">
-      <div className="w-56 border-r border-border p-4 flex flex-col shrink-0">
-        <button onClick={() => setShowCompose(true)} className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity mb-4 w-full">
-          <Plus size={16} /> Verfassen
+    <div className="flex flex-col md:flex-row h-full">
+      <div className="md:w-56 border-b md:border-b-0 md:border-r border-border p-3 md:p-4 flex md:flex-col shrink-0">
+        <button onClick={() => setShowCompose(true)} className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 md:py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity mb-2 md:mb-4 shrink-0">
+          <Plus size={16} /> <span className="hidden md:inline">Verfassen</span>
         </button>
-        <nav className="space-y-0.5">
+        <nav className="flex md:flex-col md:space-y-0.5 gap-1 md:gap-0 overflow-x-auto">
           {folders.map(f => (
             <button
               key={f.key}

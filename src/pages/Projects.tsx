@@ -69,10 +69,10 @@ export default function Projects() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Projekte</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Projekte</h1>
           <p className="text-sm text-muted-foreground mt-1">{projects.length} Projekte</p>
         </div>
         <div className="flex gap-2">
@@ -273,7 +273,8 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {/* Kanban columns - each min-w for horizontal scroll on mobile */}
         {KANBAN_COLUMNS.map(col => {
           const tasks = project.tasks.filter(t => (t.status || (t.completed ? 'done' : 'todo')) === col.status);
           const isDragOver = dragOverCol === col.status;
@@ -284,7 +285,7 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
               onDragOver={(e) => handleDragOver(e, col.status)}
               onDragLeave={() => setDragOverCol(null)}
               onDrop={(e) => handleDrop(e, col.status)}
-              className={`rounded-xl p-3 min-h-[200px] transition-colors ${isDragOver ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-secondary/50'}`}
+              className={`rounded-xl p-3 min-h-[200px] min-w-[200px] flex-shrink-0 md:flex-shrink md:min-w-0 transition-colors ${isDragOver ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-secondary/50'}`}
             >
               {/* Column header */}
               <div className="flex items-center justify-between mb-3">
