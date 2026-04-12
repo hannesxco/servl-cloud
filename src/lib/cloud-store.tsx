@@ -71,21 +71,65 @@ export function CloudStoreProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           console.error('Failed to load cloud data:', error);
-          // Fall back to localStorage
           setData(loadFromLocalStorage());
           setLoading(false);
           return;
         }
 
         const loaded = { ...defaults };
+        const existingKeys = new Set<string>();
         if (rows) {
           for (const row of rows) {
             const key = row.key as keyof StoreData;
             if (key in loaded) {
               (loaded as any)[key] = row.value;
+              existingKeys.add(key);
             }
           }
         }
+
+        // Migrate localStorage data to cloud for keys that are still at defaults
+        const localData = loadFromLocalStorage();
+        const migratePromises: Promise<any>[] = [];
+
+        for (const key of Object.keys(defaults) as (keyof StoreData)[]) {
+          const localValue = localData[key];
+          const isLocalEmpty = Array.isArray(localValue)
+            ? localValue.length === 0
+            : JSON.stringify(localValue) === JSON.stringify(defaults[key]);
+
+          if (isLocalEmpty) continue; // nothing in localStorage to migrate
+
+          const cloudValue = loaded[key];
+          const isCloudEmpty = !existingKeys.has(key) || (
+            Array.isArray(cloudValue) ? cloudValue.length === 0
+            : JSON.stringify(cloudValue) === JSON.stringify(defaults[key])
+          );
+
+          if (isCloudEmpty) {
+            // Local has data, cloud is empty → migrate
+            (loaded as any)[key] = localValue;
+            const p = (async () => {
+              const { error } = await supabase
+                .from('app_data')
+                .upsert({ key, value: localValue as any, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+              if (error) console.error(`Migration failed for ${key}:`, error);
+              else console.log(`Migrated ${key} from localStorage to cloud`);
+            })();
+            migratePromises.push(p);
+          }
+        }
+
+        if (migratePromises.length > 0) {
+          await Promise.all(migratePromises);
+          // Clear localStorage after successful migration
+          for (const key of Object.keys(defaults)) {
+            localStorage.removeItem(key);
+          }
+          localStorage.setItem('sc_migrated_to_cloud', 'true');
+          console.log('localStorage migration complete');
+        }
+
         setData(loaded);
       } catch (err) {
         console.error('Cloud store error:', err);
