@@ -25,7 +25,7 @@ export default function Dashboard() {
   }).slice(0, 3);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Willkommen zurück, Hannes</h1>
         <p className="text-muted-foreground text-sm mt-1">Hier ist deine Übersicht für heute</p>

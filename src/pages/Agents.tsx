@@ -29,10 +29,10 @@ export default function Agents() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Agents</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Agents</h1>
           <p className="text-sm text-muted-foreground mt-1">Voice-Agents planen und verwalten</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">
@@ -131,8 +131,8 @@ function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onB
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0">
-        <div className="flex-1 flex flex-col border-r border-border min-w-0">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-border min-w-0">
           <div className="px-4 py-2 border-b border-border flex items-center gap-2">
             <FileText size={14} className="text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">System Prompt</span>
@@ -147,7 +147,7 @@ function AgentWorkspace({ agent, onBack, onSave, onDelete }: { agent: Agent; onB
           </div>
         </div>
 
-        <div className="w-[400px] shrink-0 overflow-auto bg-secondary/20">
+        <div className="w-full md:w-[400px] shrink-0 overflow-auto bg-secondary/20">
           <div className="p-4 space-y-5">
             <Section title="Beschreibung">
               <textarea value={description} onChange={e => { setDescription(e.target.value); markChanged(); }} placeholder="Beschreibung des Agents..." rows={2} className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />

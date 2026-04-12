@@ -69,10 +69,10 @@ export default function Projects() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Projekte</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Projekte</h1>
           <p className="text-sm text-muted-foreground mt-1">{projects.length} Projekte</p>
         </div>
         <div className="flex gap-2">
@@ -273,7 +273,8 @@ function KanbanBoard({ project, onAddTask, onDeleteTask, onMoveTask, onToggleTas
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {/* Kanban columns - each min-w for horizontal scroll on mobile */}
         {KANBAN_COLUMNS.map(col => {
           const tasks = project.tasks.filter(t => (t.status || (t.completed ? 'done' : 'todo')) === col.status);
           const isDragOver = dragOverCol === col.status;

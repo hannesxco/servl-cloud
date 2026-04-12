@@ -31,11 +31,11 @@ export default function Finances() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-foreground mb-2">Finanzen</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Finanzen</h1>
       <p className="text-sm text-muted-foreground mb-6">Deine Unternehmensfinanzen im Überblick</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-8">
         <div className="glass-card p-4 cursor-pointer hover:border-primary/30" onClick={() => setShowBalanceEdit(true)}>
           <div className="flex items-center gap-2 mb-2"><Wallet size={16} className="text-muted-foreground" /><span className="text-xs text-muted-foreground">Kontostand</span><Pencil size={10} className="text-muted-foreground ml-auto" /></div>
           <p className="text-lg font-bold text-foreground">€{finances.currentBalance.toLocaleString('de-DE')}</p>

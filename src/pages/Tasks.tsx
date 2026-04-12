@@ -42,10 +42,10 @@ export default function Tasks() {
     });
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Aufgaben</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Aufgaben</h1>
           <p className="text-sm text-muted-foreground mt-1">{tasks.filter(t => !t.completed).length} offene Aufgaben</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">
@@ -69,27 +69,31 @@ export default function Tasks() {
         {filtered.map(t => {
           const overdue = getOverdueInfo(t);
           return (
-            <div key={t.id} className={`glass-card p-4 flex items-center gap-4 ${t.completed ? 'opacity-50' : ''}`}>
-              <button onClick={() => toggle(t.id)} className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-primary border-primary' : 'border-border hover:border-primary'}`}>
-                {t.completed && <Check size={12} className="text-primary-foreground" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.title}</p>
-                {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="text-xs text-muted-foreground">{t.date}</span>
-                  <span className="text-xs text-muted-foreground">{t.time} Uhr</span>
-                </div>
-                {overdue && (
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <AlertTriangle size={12} className="text-destructive" />
-                    <span className="text-xs text-destructive font-medium">Überfällig seit {overdue}</span>
+            <div key={t.id} className={`glass-card p-3 md:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${t.completed ? 'opacity-50' : ''}`}>
+              <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                <button onClick={() => toggle(t.id)} className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors mt-0.5 sm:mt-0 ${t.completed ? 'bg-primary border-primary' : 'border-border hover:border-primary'}`}>
+                  {t.completed && <Check size={12} className="text-primary-foreground" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${t.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.title}</p>
+                  {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-xs text-muted-foreground">{t.date}</span>
+                    <span className="text-xs text-muted-foreground">{t.time} Uhr</span>
                   </div>
-                )}
+                  {overdue && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <AlertTriangle size={12} className="text-destructive" />
+                      <span className="text-xs text-destructive font-medium">Überfällig seit {overdue}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityColors[t.priority]}`}>{t.priority}</span>
-              <button onClick={() => setEditingTask(t)} className="text-muted-foreground hover:text-foreground"><Pencil size={16} /></button>
-              <button onClick={() => remove(t.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={16} /></button>
+              <div className="flex items-center gap-2 ml-8 sm:ml-0">
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityColors[t.priority]}`}>{t.priority}</span>
+                <button onClick={() => setEditingTask(t)} className="text-muted-foreground hover:text-foreground"><Pencil size={16} /></button>
+                <button onClick={() => remove(t.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={16} /></button>
+              </div>
             </div>
           );
         })}
