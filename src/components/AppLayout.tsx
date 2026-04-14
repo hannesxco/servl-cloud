@@ -1,25 +1,99 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, TrendingUp, GitBranch, CheckSquare, Calendar, LogOut, Bot, FileText, FolderKanban, Mail, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, GitBranch, CheckSquare, Calendar, LogOut, Menu, X, GripVertical, Wallet } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavOrder } from '@/lib/cloud-store';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-const navItems = [
+const allNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/crm', icon: Users, label: 'Kunden' },
-  { to: '/projekte', icon: FolderKanban, label: 'Projekte' },
-  { to: '/mail', icon: Mail, label: 'Mail' },
-  { to: '/finanzen', icon: TrendingUp, label: 'Finanzen' },
   { to: '/pipeline', icon: GitBranch, label: 'Pipeline' },
   { to: '/aufgaben', icon: CheckSquare, label: 'Aufgaben' },
   { to: '/kalender', icon: Calendar, label: 'Kalender' },
-  { to: '/agents', icon: Bot, label: 'Agents' },
-  { to: '/rechnungen', icon: FileText, label: 'Rechnungen' },
+  { to: '/ausgaben', icon: Wallet, label: 'Ausgaben' },
 ];
+
+function SortableNavItem({ item, active, isMobile, closeSidebar }: {
+  item: typeof allNavItems[0];
+  active: boolean;
+  isMobile: boolean;
+  closeSidebar: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.to });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center group">
+      <button {...attributes} {...listeners} className="p-1 opacity-0 group-hover:opacity-60 cursor-grab touch-none shrink-0">
+        <GripVertical size={14} />
+      </button>
+      <NavLink
+        to={item.to}
+        onClick={() => isMobile && closeSidebar()}
+        className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${
+          active
+            ? 'bg-foreground text-primary-foreground font-medium shadow-sm'
+            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+        }`}
+      >
+        <item.icon size={18} />
+        {item.label}
+      </NavLink>
+    </div>
+  );
+}
 
 export default function AppLayout({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { navOrder, saveNavOrder } = useNavOrder();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const sortedNavItems = useMemo(() => {
+    if (!navOrder || navOrder.length === 0) return allNavItems;
+    const ordered: typeof allNavItems = [];
+    for (const path of navOrder) {
+      const item = allNavItems.find(n => n.to === path);
+      if (item) ordered.push(item);
+    }
+    // Add any new items not in saved order
+    for (const item of allNavItems) {
+      if (!ordered.find(o => o.to === item.to)) ordered.push(item);
+    }
+    return ordered;
+  }, [navOrder]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = sortedNavItems.findIndex(n => n.to === active.id);
+    const newIdx = sortedNavItems.findIndex(n => n.to === over.id);
+    const reordered = arrayMove(sortedNavItems, oldIdx, newIdx);
+    saveNavOrder(reordered.map(n => n.to));
+  };
 
   const sidebar = (
     <aside className={`${isMobile ? 'fixed inset-y-0 left-0 z-50 w-64' : 'w-64 shrink-0'} bg-card border-r border-border flex flex-col`}>
@@ -35,24 +109,22 @@ export default function AppLayout({ children, onLogout }: { children: ReactNode;
         )}
       </div>
       <nav className="flex-1 px-3 space-y-0.5 overflow-auto">
-        {navItems.map(({ to, icon: Icon, label }) => {
-          const active = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => isMobile && setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${
-                active
-                  ? 'bg-foreground text-primary-foreground font-medium shadow-sm'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
-          );
-        })}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortedNavItems.map(n => n.to)} strategy={verticalListSortingStrategy}>
+            {sortedNavItems.map(item => {
+              const active = location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to));
+              return (
+                <SortableNavItem
+                  key={item.to}
+                  item={item}
+                  active={active}
+                  isMobile={isMobile}
+                  closeSidebar={() => setSidebarOpen(false)}
+                />
+              );
+            })}
+          </SortableContext>
+        </DndContext>
       </nav>
       <div className="p-3 border-t border-border">
         <button

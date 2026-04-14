@@ -10,14 +10,10 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import CRM from "@/pages/CRM";
 import CustomerDetail from "@/pages/CustomerDetail";
-import Finances from "@/pages/Finances";
 import Pipeline from "@/pages/Pipeline";
 import Tasks from "@/pages/Tasks";
 import CalendarView from "@/pages/CalendarView";
-import Agents from "@/pages/Agents";
-import Invoices from "@/pages/Invoices";
-import Projects from "@/pages/Projects";
-import Mail from "@/pages/Mail";
+import Expenses from "@/pages/Expenses";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -60,14 +56,10 @@ function AppContent() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/crm" element={<CRM />} />
           <Route path="/crm/:id" element={<CustomerDetail />} />
-          <Route path="/finanzen" element={<Finances />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/aufgaben" element={<Tasks />} />
           <Route path="/kalender" element={<CalendarView />} />
-          <Route path="/agents" element={<Agents />} />
-          <Route path="/rechnungen" element={<Invoices />} />
-          <Route path="/projekte" element={<Projects />} />
-          <Route path="/mail" element={<Mail />} />
+          <Route path="/ausgaben" element={<Expenses />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppLayout>
