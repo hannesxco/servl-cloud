@@ -162,3 +162,20 @@ export interface MailMessage {
   folder: 'inbox' | 'sent' | 'drafts';
   customerId?: string;
 }
+
+// Business Expenses (Ausgaben)
+export interface BusinessExpense {
+  id: string;
+  name: string;
+  amount: number;
+  category: string;
+  date: string;
+  receiptUrl?: string;
+  createdAt: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  icon?: string;
+}
