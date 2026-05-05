@@ -57,47 +57,73 @@ export default function CRM() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c => (
-          <div
-            key={c.id}
-            onClick={() => navigate(`/crm/${c.id}`)}
-            className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                {c.avatar ? (
-                  <img src={c.avatar} alt={c.name} className="w-10 h-10 rounded-full object-cover bg-secondary" loading="lazy" width={40} height={40} />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-brand-purple/20 flex items-center justify-center text-brand-purple font-semibold text-sm">
-                    {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
-                  <p className="text-sm text-muted-foreground">{c.company}</p>
+      {(() => {
+        const NO_CITY = 'Ohne Ortsangabe';
+        const sorted = [...filtered].sort((a, b) =>
+          (a.city?.trim() || NO_CITY).localeCompare(b.city?.trim() || NO_CITY, 'de')
+        );
+        const groups: { city: string; items: typeof filtered }[] = [];
+        for (const c of sorted) {
+          const cityKey = c.city?.trim() || NO_CITY;
+          const last = groups[groups.length - 1];
+          if (last && last.city === cityKey) last.items.push(c);
+          else groups.push({ city: cityKey, items: [c] });
+        }
+        return (
+          <div className="space-y-8">
+            {groups.map(g => (
+              <section key={g.city}>
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin size={14} className="text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground tracking-wide">{g.city}</h2>
+                  <span className="text-xs text-muted-foreground">· {g.items.length}</span>
                 </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
-                <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
-              </div>
-            </div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin size={14} /> {c.city}
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {g.items.map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => navigate(`/crm/${c.id}`)}
+                      className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-colors group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {c.avatar ? (
+                            <img src={c.avatar} alt={c.name} className="w-10 h-10 rounded-full object-cover bg-secondary" loading="lazy" width={40} height={40} />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-brand-purple/20 flex items-center justify-center text-brand-purple font-semibold text-sm">
+                              {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{c.name}</h3>
+                            <p className="text-sm text-muted-foreground">{c.company}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }} className="p-1 text-muted-foreground hover:text-foreground rounded"><Pencil size={14} /></button>
+                          <button onClick={(e) => deleteCustomer(c.id, e)} className="p-1 text-muted-foreground hover:text-destructive rounded"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground mb-3 inline-block">{c.companyType}</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Euro size={14} /> <span className="text-foreground font-medium">€{c.totalRevenue.toLocaleString('de-DE')}</span> Gesamtumsatz
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock size={14} /> {partnerMonths(c.partnerSince)} Monate Partner
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin size={14} /> {c.city || '–'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {showAdd && <CustomerModal onClose={() => setShowAdd(false)} onSave={(c) => {
         updateCustomers([...customers, c]);

@@ -1,6 +1,6 @@
 import { ReactNode, useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, GitBranch, CheckSquare, Calendar, LogOut, Menu, X, GripVertical, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, GitBranch, CheckSquare, Calendar, LogOut, Menu, X, GripVertical } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavOrder } from '@/lib/cloud-store';
 import {
@@ -25,7 +25,6 @@ const allNavItems = [
   { to: '/pipeline', icon: GitBranch, label: 'Pipeline' },
   { to: '/aufgaben', icon: CheckSquare, label: 'Aufgaben' },
   { to: '/kalender', icon: Calendar, label: 'Kalender' },
-  { to: '/ausgaben', icon: Wallet, label: 'Ausgaben' },
 ];
 
 function SortableNavItem({ item, active, isMobile, closeSidebar }: {

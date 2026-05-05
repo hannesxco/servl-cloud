@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Plus, Phone, Mail, MapPin, Euro, Trash2, X, ChevronRight } from 'lucide-react';
-import { usePipeline } from '@/lib/cloud-store';
-import { PipelineContact } from '@/types';
+import { useState, useMemo } from 'react';
+import { Plus, Phone, Mail, MapPin, Euro, Trash2, X, ChevronRight, UserPlus } from 'lucide-react';
+import { usePipeline, useCustomers } from '@/lib/cloud-store';
+import { PipelineContact, Customer } from '@/types';
+import { toast } from '@/hooks/use-toast';
 
 const stages = [
   { key: 'neu', label: 'Neu', color: 'bg-info/20 text-info' },
@@ -12,8 +13,11 @@ const stages = [
   { key: 'verloren', label: 'Verloren', color: 'bg-destructive/20 text-destructive' },
 ] as const;
 
+const NO_CITY = 'Ohne Ortsangabe';
+
 export default function Pipeline() {
   const { pipeline: contacts, savePipeline } = usePipeline();
+  const { customers, saveCustomers } = useCustomers();
   const [showAdd, setShowAdd] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<PipelineContact | null>(null);
@@ -22,6 +26,7 @@ export default function Pipeline() {
 
   const moveToStage = (id: string, stage: PipelineContact['stage']) => {
     update(contacts.map(c => c.id === id ? { ...c, stage } : c));
+    if (selectedContact?.id === id) setSelectedContact({ ...selectedContact, stage });
   };
 
   const deleteContact = (id: string) => {
@@ -31,6 +36,30 @@ export default function Pipeline() {
   const updateContact = (updated: PipelineContact) => {
     update(contacts.map(c => c.id === updated.id ? updated : c));
     setSelectedContact(updated);
+  };
+
+  const convertToCustomer = (c: PipelineContact) => {
+    if (!confirm(`„${c.name}" in einen Kunden umwandeln? Der Lead wird aus der Pipeline entfernt.`)) return;
+    const newCustomer: Customer = {
+      id: crypto.randomUUID(),
+      name: c.name,
+      company: c.company,
+      companyType: c.companyType,
+      city: c.city,
+      address: c.address,
+      phone: c.phone,
+      email: c.email,
+      notes: c.notes,
+      partnerSince: new Date().toISOString().split('T')[0],
+      totalRevenue: 0,
+      monthlyRevenue: {},
+      invoices: [],
+      voiceAgents: [],
+    };
+    saveCustomers([...customers, newCustomer]);
+    update(contacts.filter(x => x.id !== c.id));
+    setSelectedContact(null);
+    toast({ title: 'Lead umgewandelt', description: `${c.name} wurde zu den Kunden hinzugefügt.` });
   };
 
   return (
@@ -47,8 +76,21 @@ export default function Pipeline() {
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {stages.map(({ key, label, color }) => {
-          const stageContacts = contacts.filter(c => c.stage === key);
+          const stageContacts = contacts
+            .filter(c => c.stage === key)
+            .slice()
+            .sort((a, b) => (a.city || NO_CITY).localeCompare(b.city || NO_CITY, 'de'));
           const totalValue = stageContacts.reduce((s, c) => s + c.value, 0);
+
+          // Group by city
+          const grouped: { city: string; items: PipelineContact[] }[] = [];
+          for (const c of stageContacts) {
+            const cityKey = c.city?.trim() || NO_CITY;
+            const last = grouped[grouped.length - 1];
+            if (last && last.city === cityKey) last.items.push(c);
+            else grouped.push({ city: cityKey, items: [c] });
+          }
+
           return (
             <div
               key={key}
@@ -63,25 +105,34 @@ export default function Pipeline() {
                 </div>
                 <span className="text-xs text-muted-foreground">€{totalValue.toLocaleString('de-DE')}/mo</span>
               </div>
-              <div className="space-y-3">
-                {stageContacts.map(c => (
-                  <div
-                    key={c.id}
-                    draggable
-                    onDragStart={() => setDragId(c.id)}
-                    onClick={() => setSelectedContact(c)}
-                    className="glass-card p-4 cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1">{c.name} <ChevronRight size={12} className="text-muted-foreground" /></h3>
-                        <p className="text-xs text-muted-foreground">{c.company}</p>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); deleteContact(c.id); }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+              <div className="space-y-4">
+                {grouped.map(group => (
+                  <div key={group.city}>
+                    <div className="flex items-center gap-1.5 mb-2 px-1">
+                      <MapPin size={11} className="text-muted-foreground" />
+                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{group.city}</span>
                     </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1"><MapPin size={12} />{c.city}</div>
-                      <div className="flex items-center gap-1"><Euro size={12} />€{c.value}/mo potenzial</div>
+                    <div className="space-y-3">
+                      {group.items.map(c => (
+                        <div
+                          key={c.id}
+                          draggable
+                          onDragStart={() => setDragId(c.id)}
+                          onClick={() => setSelectedContact(c)}
+                          className="glass-card p-4 cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1">{c.name} <ChevronRight size={12} className="text-muted-foreground" /></h3>
+                              <p className="text-xs text-muted-foreground">{c.company}</p>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); deleteContact(c.id); }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                          </div>
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1"><Euro size={12} />€{c.value}/mo potenzial</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -92,12 +143,28 @@ export default function Pipeline() {
       </div>
 
       {showAdd && <AddLeadModal onClose={() => setShowAdd(false)} onAdd={(c) => { update([...contacts, c]); setShowAdd(false); }} />}
-      {selectedContact && <ContactProfileModal contact={selectedContact} onClose={() => setSelectedContact(null)} onUpdate={updateContact} onDelete={() => { deleteContact(selectedContact.id); setSelectedContact(null); }} />}
+      {selectedContact && (
+        <ContactProfileModal
+          contact={selectedContact}
+          onClose={() => setSelectedContact(null)}
+          onUpdate={updateContact}
+          onDelete={() => { deleteContact(selectedContact.id); setSelectedContact(null); }}
+          onStageChange={(s) => moveToStage(selectedContact.id, s)}
+          onConvert={() => convertToCustomer(selectedContact)}
+        />
+      )}
     </div>
   );
 }
 
-function ContactProfileModal({ contact, onClose, onUpdate, onDelete }: { contact: PipelineContact; onClose: () => void; onUpdate: (c: PipelineContact) => void; onDelete: () => void }) {
+function ContactProfileModal({ contact, onClose, onUpdate, onDelete, onStageChange, onConvert }: {
+  contact: PipelineContact;
+  onClose: () => void;
+  onUpdate: (c: PipelineContact) => void;
+  onDelete: () => void;
+  onStageChange: (s: PipelineContact['stage']) => void;
+  onConvert: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...contact });
   const set = (k: string, v: string | number) => setForm(p => ({ ...p, [k]: v }));
@@ -114,9 +181,22 @@ function ContactProfileModal({ contact, onClose, onUpdate, onDelete }: { contact
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
         </div>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <span className={`text-xs px-2 py-0.5 rounded-full ${stage?.color}`}>{stage?.label}</span>
           <span className="text-xs text-muted-foreground">Erstellt am {contact.createdAt}</span>
+        </div>
+
+        <div className="mb-4">
+          <label className="text-xs text-muted-foreground block mb-1">Status ändern</label>
+          <select
+            value={contact.stage}
+            onChange={e => onStageChange(e.target.value as PipelineContact['stage'])}
+            className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            {stages.map(s => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
         </div>
 
         {editing ? (
@@ -158,7 +238,13 @@ function ContactProfileModal({ contact, onClose, onUpdate, onDelete }: { contact
                 <p className="text-sm text-foreground bg-secondary p-3 rounded-md">{contact.notes}</p>
               </div>
             )}
-            <div className="flex gap-3 pt-2">
+            <button
+              onClick={onConvert}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-md text-xs bg-success/15 text-success font-medium hover:bg-success/25 transition-colors"
+            >
+              <UserPlus size={14} /> In Kunden umwandeln
+            </button>
+            <div className="flex gap-3 pt-1">
               <button onClick={() => setEditing(true)} className="flex-1 py-2 rounded-md text-xs border border-border text-foreground hover:bg-accent">Bearbeiten</button>
               <button onClick={onDelete} className="py-2 px-4 rounded-md text-xs text-destructive hover:bg-destructive/10">Löschen</button>
             </div>

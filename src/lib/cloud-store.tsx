@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Customer, PipelineContact, Task, CalendarEvent, CalendarCategory, FinanceData, Agent, UploadedInvoice, Project, ProjectTag, MailMessage, BusinessExpense, ExpenseCategory } from '@/types';
+import { Customer, PipelineContact, Task, CalendarEvent, CalendarCategory, FinanceData, Agent, UploadedInvoice, Project, ProjectTag, MailMessage } from '@/types';
 
 const defaultCalendars: CalendarCategory[] = [
   { id: 'cal-1', name: 'Akquise', color: 'hsl(217, 91%, 60%)' },
@@ -30,8 +30,6 @@ interface StoreData {
   sc_projects: Project[];
   sc_project_tags: ProjectTag[];
   sc_mails: MailMessage[];
-  sc_business_expenses: BusinessExpense[];
-  sc_expense_categories: ExpenseCategory[];
   sc_nav_order: string[];
 }
 
@@ -47,8 +45,6 @@ const defaults: StoreData = {
   sc_projects: [],
   sc_project_tags: [],
   sc_mails: [],
-  sc_business_expenses: [],
-  sc_expense_categories: [],
   sc_nav_order: [],
 };
 
@@ -257,22 +253,6 @@ export function useMails() {
   };
 }
 
-export function useBusinessExpenses() {
-  const { data, update } = useCloudStore();
-  return {
-    expenses: data.sc_business_expenses,
-    saveExpenses: (e: BusinessExpense[]) => update('sc_business_expenses', e),
-  };
-}
-
-export function useExpenseCategories() {
-  const { data, update } = useCloudStore();
-  return {
-    categories: data.sc_expense_categories,
-    saveCategories: (c: ExpenseCategory[]) => update('sc_expense_categories', c),
-  };
-}
-
 export function useNavOrder() {
   const { data, update } = useCloudStore();
   return {
@@ -301,8 +281,6 @@ function loadFromLocalStorage(): StoreData {
     sc_projects: load('sc_projects', []),
     sc_project_tags: load('sc_project_tags', []),
     sc_mails: load('sc_mails', []),
-    sc_business_expenses: load('sc_business_expenses', []),
-    sc_expense_categories: load('sc_expense_categories', []),
     sc_nav_order: load('sc_nav_order', []),
   };
 }
