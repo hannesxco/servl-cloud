@@ -11,8 +11,6 @@ import Dashboard from "@/pages/Dashboard";
 import CRM from "@/pages/CRM";
 import CustomerDetail from "@/pages/CustomerDetail";
 import Pipeline from "@/pages/Pipeline";
-import Tasks from "@/pages/Tasks";
-import CalendarView from "@/pages/CalendarView";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
