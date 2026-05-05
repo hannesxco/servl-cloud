@@ -11,8 +11,6 @@ import Dashboard from "@/pages/Dashboard";
 import CRM from "@/pages/CRM";
 import CustomerDetail from "@/pages/CustomerDetail";
 import Pipeline from "@/pages/Pipeline";
-import Tasks from "@/pages/Tasks";
-import CalendarView from "@/pages/CalendarView";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -56,8 +54,6 @@ function AppContent() {
           <Route path="/crm" element={<CRM />} />
           <Route path="/crm/:id" element={<CustomerDetail />} />
           <Route path="/pipeline" element={<Pipeline />} />
-          <Route path="/aufgaben" element={<Tasks />} />
-          <Route path="/kalender" element={<CalendarView />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppLayout>
