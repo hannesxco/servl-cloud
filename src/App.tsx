@@ -54,8 +54,6 @@ function AppContent() {
           <Route path="/crm" element={<CRM />} />
           <Route path="/crm/:id" element={<CustomerDetail />} />
           <Route path="/pipeline" element={<Pipeline />} />
-          <Route path="/aufgaben" element={<Tasks />} />
-          <Route path="/kalender" element={<CalendarView />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppLayout>
