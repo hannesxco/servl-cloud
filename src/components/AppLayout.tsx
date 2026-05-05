@@ -23,8 +23,6 @@ const allNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/crm', icon: Users, label: 'Kunden' },
   { to: '/pipeline', icon: GitBranch, label: 'Pipeline' },
-  { to: '/aufgaben', icon: CheckSquare, label: 'Aufgaben' },
-  { to: '/kalender', icon: Calendar, label: 'Kalender' },
 ];
 
 function SortableNavItem({ item, active, isMobile, closeSidebar }: {
