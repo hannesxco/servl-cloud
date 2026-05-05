@@ -13,7 +13,6 @@ import CustomerDetail from "@/pages/CustomerDetail";
 import Pipeline from "@/pages/Pipeline";
 import Tasks from "@/pages/Tasks";
 import CalendarView from "@/pages/CalendarView";
-import Expenses from "@/pages/Expenses";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -59,7 +58,6 @@ function AppContent() {
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/aufgaben" element={<Tasks />} />
           <Route path="/kalender" element={<CalendarView />} />
-          <Route path="/ausgaben" element={<Expenses />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppLayout>
