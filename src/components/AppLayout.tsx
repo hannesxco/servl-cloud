@@ -1,6 +1,6 @@
 import { ReactNode, useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, GitBranch, CheckSquare, Calendar, LogOut, Menu, X, GripVertical } from 'lucide-react';
+import { LayoutDashboard, Users, GitBranch, LogOut, Menu, X, GripVertical } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavOrder } from '@/lib/cloud-store';
 import {
