@@ -1,21 +1,15 @@
 import { Link } from 'react-router-dom';
-import { Users, TrendingUp, CheckSquare, Calendar, Euro, Wallet, ArrowRight, Mail, FolderKanban } from 'lucide-react';
-import { useCustomers, useTasks, useEvents, useFinances, useMails, useProjects } from '@/lib/cloud-store';
-import { CalendarEvent } from '@/types';
+import { Users, TrendingUp, Euro, Wallet, ArrowRight, Mail, FolderKanban } from 'lucide-react';
+import { useCustomers, useFinances, useMails, useProjects } from '@/lib/cloud-store';
 
 export default function Dashboard() {
   const { customers } = useCustomers();
-  const { tasks } = useTasks();
-  const { events } = useEvents();
   const { finances } = useFinances();
   const { mails } = useMails();
   const { projects } = useProjects();
 
-  const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const todayTasks = tasks.filter(t => t.date === today && !t.completed);
-  const todayEvents = events.filter(e => e.date === today);
   const monthlyRevenue = finances.monthlyRevenues[currentMonth] || 0;
   const mrr = finances.fixedMonthlyIncome.reduce((s, i) => s + i.amount, 0);
   const recentMails = mails.filter(m => m.folder === 'inbox').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
@@ -39,38 +33,6 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground flex items-center gap-2">
-              <Calendar size={18} className="text-brand-blue" />
-              {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </h2>
-            <Link to="/kalender" className="text-xs text-brand-blue hover:underline flex items-center gap-1">Kalender <ArrowRight size={12} /></Link>
-          </div>
-          <DayTimeline events={todayEvents} />
-        </div>
-
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground flex items-center gap-2"><CheckSquare size={18} className="text-brand-green" />Heutige Aufgaben</h2>
-            <Link to="/aufgaben" className="text-xs text-brand-green hover:underline flex items-center gap-1">Alle <ArrowRight size={12} /></Link>
-          </div>
-          {todayTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine offenen Aufgaben heute</p>
-          ) : (
-            <div className="space-y-3">
-              {todayTasks.map(t => (
-                <div key={t.id} className="flex items-center justify-between p-3 rounded-md bg-secondary/50">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{t.title}</p>
-                    <p className="text-xs text-muted-foreground">{t.time} Uhr</p>
-                  </div>
-                  <PriorityBadge priority={t.priority} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
